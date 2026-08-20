@@ -1,0 +1,58 @@
+{
+  "name": "RaceSession",
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "title": "Status",
+      "enum": [
+        "setup",
+        "running",
+        "finished"
+      ],
+      "default": "setup"
+    },
+    "total_laps": {
+      "type": "number",
+      "title": "Total Laps",
+      "default": 12
+    },
+    "our_name": {
+      "type": "string",
+      "title": "Our Driver Name"
+    },
+    "our_number": {
+      "type": "string",
+      "title": "Our Car Number"
+    },
+    "competitor1_name": {
+      "type": "string",
+      "title": "Competitor 1 Name"
+    },
+    "competitor1_number": {
+      "type": "string",
+      "title": "Competitor 1 Number"
+    },
+    "competitor2_name": {
+      "type": "string",
+      "title": "Competitor 2 Name"
+    },
+    "competitor2_number": {
+      "type": "string",
+      "title": "Competitor 2 Number"
+    },
+    "start_time": {
+      "type": "string",
+      "title": "Start Time",
+      "format": "date-time"
+    },
+    "description": {
+      "type": "string",
+      "title": "Description",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "total_laps"
+  ]
+}

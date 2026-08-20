@@ -1,0 +1,102 @@
+{
+  "name": "Driver",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Full Name"
+    },
+    "number": {
+      "type": "string",
+      "title": "Car Number"
+    },
+    "age": {
+      "type": "number",
+      "title": "Age"
+    },
+    "weight_kg": {
+      "type": "number",
+      "title": "Weight (kg)"
+    },
+    "experience_years": {
+      "type": "number",
+      "title": "Years Experience"
+    },
+    "wins": {
+      "type": "number",
+      "title": "Career Wins",
+      "default": 0
+    },
+    "podiums": {
+      "type": "number",
+      "title": "Career Podiums",
+      "default": 0
+    },
+    "races_entered": {
+      "type": "number",
+      "title": "Races Entered",
+      "default": 0
+    },
+    "best_finish": {
+      "type": "string",
+      "title": "Best Finish"
+    },
+    "avg_lap_time": {
+      "type": "string",
+      "title": "Avg Lap Time"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Driver Notes"
+    },
+    "motor_type": {
+      "type": "string",
+      "title": "Motor Type"
+    },
+    "battery_capacity": {
+      "type": "string",
+      "title": "Battery Capacity"
+    },
+    "gear_ratio": {
+      "type": "string",
+      "title": "Gear Ratio"
+    },
+    "tire_type": {
+      "type": "string",
+      "title": "Tire Type"
+    },
+    "wheel_size": {
+      "type": "string",
+      "title": "Wheel Size (in)"
+    },
+    "aero_config": {
+      "type": "string",
+      "title": "Aero Configuration",
+      "enum": [
+        "Stock",
+        "Low Drag",
+        "High Downforce",
+        "Custom"
+      ],
+      "default": "Stock"
+    },
+    "setup_notes": {
+      "type": "string",
+      "title": "Vehicle Setup Notes"
+    },
+    "status": {
+      "type": "string",
+      "title": "Status",
+      "enum": [
+        "Active",
+        "Reserve",
+        "Inactive"
+      ],
+      "default": "Active"
+    }
+  },
+  "required": [
+    "name",
+    "number"
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "name": "RaceMessage",
+  "type": "object",
+  "properties": {
+    "messageId": {
+      "type": "string",
+      "title": "Message ID"
+    },
+    "commandText": {
+      "type": "string",
+      "title": "Command Text"
+    },
+    "status": {
+      "type": "string",
+      "title": "Status",
+      "enum": [
+        "Pending",
+        "Delivered",
+        "Acknowledged"
+      ],
+      "default": "Pending"
+    },
+    "timestamp": {
+      "type": "string",
+      "title": "Timestamp",
+      "format": "date-time"
+    },
+    "description": {
+      "type": "string",
+      "title": "Description",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "messageId",
+    "commandText",
+    "status"
+  ]
+}

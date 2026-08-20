@@ -1,0 +1,51 @@
+{
+  "name": "LapLog",
+  "type": "object",
+  "properties": {
+    "session_id": {
+      "type": "string",
+      "title": "Session ID"
+    },
+    "lap_number": {
+      "type": "number",
+      "title": "Lap Number"
+    },
+    "car": {
+      "type": "string",
+      "title": "Car Key",
+      "enum": [
+        "our",
+        "comp1",
+        "comp2"
+      ]
+    },
+    "car_name": {
+      "type": "string",
+      "title": "Car Name"
+    },
+    "car_number": {
+      "type": "string",
+      "title": "Car Number"
+    },
+    "lap_time": {
+      "type": "number",
+      "title": "Lap Time (seconds)"
+    },
+    "gap": {
+      "type": "number",
+      "title": "Gap to Leader (seconds)",
+      "default": 0
+    },
+    "description": {
+      "type": "string",
+      "title": "Description",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "session_id",
+    "lap_number",
+    "car",
+    "lap_time"
+  ]
+}
