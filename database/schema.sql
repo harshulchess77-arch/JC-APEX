@@ -88,6 +88,21 @@ CREATE TABLE incident_reports (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Telemetry logs table for real-time hardware data
+CREATE TABLE IF NOT EXISTS public.telemetry_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    session_id TEXT NOT NULL,
+    packet_id BIGINT NOT NULL,
+    current NUMERIC(8,2) NOT NULL,
+    rssi NUMERIC(5,1),
+    snr NUMERIC(5,1),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Index session_id and created_at for fast time-series filtering
+CREATE INDEX IF NOT EXISTS idx_telemetry_session_time
+ON public.telemetry_logs (session_id, created_at DESC);
+
 -- Create indexes for better query performance
 CREATE INDEX idx_drivers_status ON drivers(status);
 CREATE INDEX idx_drivers_number ON drivers(number);
@@ -126,8 +141,12 @@ CREATE POLICY "Authenticated users can update races" ON races FOR UPDATE USING (
 CREATE POLICY "Authenticated users can delete races" ON races FOR DELETE USING (auth.role() = 'authenticated');
 
 -- Telemetry logs policies
-CREATE POLICY "Telemetry logs are publicly viewable" ON telemetry_logs FOR SELECT USING (true);
-CREATE POLICY "Authenticated users can insert telemetry logs" ON telemetry_logs FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Allow anon insert and select" ON telemetry_logs
+FOR ALL
+TO anon
+USING (true)
+WITH CHECK (true);
+
 CREATE POLICY "Authenticated users can update telemetry logs" ON telemetry_logs FOR UPDATE USING (auth.role() = 'authenticated');
 CREATE POLICY "Authenticated users can delete telemetry logs" ON telemetry_logs FOR DELETE USING (auth.role() = 'authenticated');
 
@@ -136,6 +155,16 @@ CREATE POLICY "Incident reports are publicly viewable" ON incident_reports FOR S
 CREATE POLICY "Authenticated users can insert incident reports" ON incident_reports FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 CREATE POLICY "Authenticated users can update incident reports" ON incident_reports FOR UPDATE USING (auth.role() = 'authenticated');
 CREATE POLICY "Authenticated users can delete incident reports" ON incident_reports FOR DELETE USING (auth.role() = 'authenticated');
+
+-- Hardware telemetry policies (cleanup - drop if exists from previous migration)
+DROP POLICY IF EXISTS "Hardware telemetry is publicly viewable" ON hardware_telemetry;
+DROP POLICY IF EXISTS "Anon users can insert hardware telemetry" ON hardware_telemetry;
+DROP POLICY IF EXISTS "Authenticated users can insert hardware telemetry" ON hardware_telemetry;
+DROP POLICY IF EXISTS "Authenticated users can update hardware telemetry" ON hardware_telemetry;
+DROP POLICY IF EXISTS "Authenticated users can delete hardware telemetry" ON hardware_telemetry;
+
+-- Remove hardware_telemetry from realtime publication if it exists
+ALTER PUBLICATION supabase_realtime DROP TABLE IF EXISTS hardware_telemetry;
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -155,3 +184,38 @@ CREATE TRIGGER update_vehicle_configs_updated_at BEFORE UPDATE ON vehicle_config
 
 CREATE TRIGGER update_races_updated_at BEFORE UPDATE ON races
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Function to calculate session metrics for PDF export
+CREATE OR REPLACE FUNCTION calculate_session_metrics(session_id_param TEXT)
+RETURNS TABLE (
+  session_id TEXT,
+  total_records BIGINT,
+  peak_current NUMERIC,
+  avg_current NUMERIC,
+  min_current NUMERIC,
+  duration_seconds NUMERIC,
+  avg_rssi NUMERIC,
+  avg_snr NUMERIC
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    tl.session_id,
+    COUNT(*) as total_records,
+    MAX(tl.current) as peak_current,
+    AVG(tl.current) as avg_current,
+    MIN(tl.current) as min_current,
+    EXTRACT(EPOCH FROM (MAX(tl.created_at) - MIN(tl.created_at))) as duration_seconds,
+    AVG(tl.rssi) as avg_rssi,
+    AVG(tl.snr) as avg_snr
+  FROM telemetry_logs tl
+  WHERE tl.session_id = session_id_param
+  GROUP BY tl.session_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Enable Realtime on telemetry_logs table
+ALTER PUBLICATION supabase_realtime ADD TABLE public.telemetry_logs;
+
+-- Cleanup: Drop old hardware_telemetry table if it exists from previous migration
+DROP TABLE IF EXISTS hardware_telemetry CASCADE;

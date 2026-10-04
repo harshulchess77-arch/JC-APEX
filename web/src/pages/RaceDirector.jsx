@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Activity, Timer, LogOut, LayoutDashboard, Car, Flag as FlagIcon, AlertTriangle, CheckCircle2, TrendingDown, Radio } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
-import { useTelemetry } from '../hooks/useTelemetry';
+import { useTelemetry } from '../hooks/useMockTelemetry';
 import { useRealtimeTelemetry, COMMAND_TYPES, COMMAND_STATUS } from '../hooks/useRealtimeTelemetry';
 import FlagPanel from '../components/command/FlagPanel';
 

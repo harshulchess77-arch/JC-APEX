@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, Users, LogIn, Zap, Gauge, Radio, ChevronRight } from 'lucide-react';
-import { useTelemetry } from '../hooks/useTelemetry';
+import { useTelemetry } from '../hooks/useMockTelemetry';
 import SpeedDial from '../components/pit/SpeedDial';
 import OverviewTab from '../components/pit/OverviewTab';
 import OracleTab from '../components/pit/OracleTab';
