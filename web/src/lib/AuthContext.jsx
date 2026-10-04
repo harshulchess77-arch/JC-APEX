@@ -1,7 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-// import { base44 } from '@/api/base44Client';
-// import { appParams } from '@/lib/app-params';
-// import axios from 'axios';
+import { base44 } from '@/api/base44Client';
 
 const AuthContext = createContext();
 
