@@ -110,7 +110,7 @@ export default function RaceDirector() {
             <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded border border-border bg-secondary/20 text-xs font-mono text-muted-foreground">
               LAP <span className="text-foreground font-bold ml-1">{Math.floor(telemetry.lap)}</span>/{telemetry.totalLaps}
             </div>
-            <button onClick={() => navigate('/login')} className="p-1.5 text-muted-foreground/50 hover:text-muted-foreground">
+            <button onClick={() => navigate('/')} className="p-1.5 text-muted-foreground/50 hover:text-muted-foreground">
               <LogOut className="w-4 h-4" />
             </button>
           </div>

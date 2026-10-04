@@ -171,7 +171,7 @@ export default function DriverHUD() {
               <span className="font-bold">{signalStatus}</span>
             </div>
           </div>
-          <button onClick={() => navigate('/login')} className="text-white/15 hover:text-white/40 transition-colors">
+          <button onClick={() => navigate('/')} className="text-white/15 hover:text-white/40 transition-colors">
             <LogOut className="w-3.5 h-3.5" />
           </button>
         </div>

@@ -11,7 +11,7 @@ export default function PasscodeProtectedRoute() {
   const { isAuthed, loading } = usePasscodeAuth();
 
   if (loading) return <Fallback />;
-  if (!isAuthed) return <Navigate to="/login" replace />;
+  if (!isAuthed) return <Navigate to="/" replace />;
 
   return <Outlet />;
 }
