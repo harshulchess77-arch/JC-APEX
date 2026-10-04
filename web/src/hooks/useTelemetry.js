@@ -14,6 +14,7 @@ export function useTelemetry(sessionId = null, enabled = true) {
   const [activeSessionId, setActiveSessionId] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
   const [telemetryHistory, setTelemetryHistory] = useState([]);
+  const [isLive, setIsLive] = useState(false);
 
   useEffect(() => {
     if (!enabled) {
@@ -46,6 +47,7 @@ export function useTelemetry(sessionId = null, enabled = true) {
           setActiveSessionId(data.session_id);
           setLastUpdate(new Date());
           setIsConnected(true);
+          setIsLive(true);
 
           // Cap telemetry history to latest 200 points
           setTelemetryHistory(prev => {
@@ -68,6 +70,23 @@ export function useTelemetry(sessionId = null, enabled = true) {
       supabase.removeChannel(channel);
     };
   }, [enabled, sessionId]);
+
+  // Health check: isLive = true if packet received within last 3000ms
+  useEffect(() => {
+    if (!lastUpdate) {
+      setIsLive(false);
+      return;
+    }
+
+    const now = new Date();
+    const timeSinceLastUpdate = now - lastUpdate;
+
+    if (timeSinceLastUpdate < 3000) {
+      setIsLive(true);
+    } else {
+      setIsLive(false);
+    }
+  }, [lastUpdate]);
 
   // Function to fetch latest session data (for historical charts)
   const fetchSessionData = useCallback(async (sessionIdParam, limit = 100) => {
@@ -103,13 +122,45 @@ export function useTelemetry(sessionId = null, enabled = true) {
     }
   }, []);
 
+  // Function to fetch available sessions for session selector
+  const fetchAvailableSessions = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('telemetry_logs')
+        .select('session_id, created_at')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Get unique session IDs with their latest timestamp
+      const sessionMap = new Map();
+      data.forEach(record => {
+        if (!sessionMap.has(record.session_id)) {
+          sessionMap.set(record.session_id, record.created_at);
+        }
+      });
+
+      // Convert to array and sort by timestamp descending
+      const sessions = Array.from(sessionMap.entries())
+        .map(([sessionId, createdAt]) => ({ sessionId, createdAt }))
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      return sessions;
+    } catch (error) {
+      console.error('Error fetching available sessions:', error);
+      return [];
+    }
+  }, []);
+
   return {
     hardwareData,
     isConnected,
+    isLive,
     sessionId: activeSessionId,
     lastUpdate,
     telemetryHistory,
     fetchSessionData,
     fetchSessionMetrics,
+    fetchAvailableSessions,
   };
 }

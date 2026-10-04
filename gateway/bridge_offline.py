@@ -36,6 +36,8 @@ class OfflineTelemetryLogger:
         self.running = True
         self.serial_queue = queue.Queue()
         self.serial_thread: Optional[threading.Thread] = None
+        self.last_packet_id = -1
+        self.packet_loss_count = 0
 
     def _generate_session_id(self) -> str:
         """Generate a unique session ID for this run"""
@@ -109,6 +111,16 @@ class OfflineTelemetryLogger:
             if not self.validate_telemetry(data):
                 return
 
+            # Track packet loss by detecting gaps in packet_id
+            current_packet_id = int(data['packet_id'])
+            if self.last_packet_id >= 0:
+                gap = current_packet_id - (self.last_packet_id + 1)
+                if gap > 0:
+                    self.packet_loss_count += gap
+                    print(f"[{datetime.now().strftime('%H:%M:%S')}] Packet loss detected: {gap} packets missing (total lost: {self.packet_loss_count})")
+
+            self.last_packet_id = current_packet_id
+
             # Prepare CSV row
             timestamp = datetime.now(timezone.utc).isoformat()
             csv_row = f"{self.session_id},{data['packet_id']},{data['current']},{data['rssi']},{data['snr']},{timestamp}\n"
@@ -149,7 +161,7 @@ class OfflineTelemetryLogger:
                 break
 
     def run(self):
-        """Main loop with reconnect logic and threaded serial reading"""
+        """Main loop with infinite retry logic and threaded serial reading"""
         print(f"Session ID: {self.session_id}")
         print(f"CSV Output: {self.csv_file}")
         print("Listening for telemetry data...")
@@ -161,8 +173,8 @@ class OfflineTelemetryLogger:
         try:
             while self.running:
                 if not self.connect_serial():
-                    print("Retrying in 5 seconds...")
-                    time.sleep(5)
+                    print("Retrying in 2 seconds...")
+                    time.sleep(2)
                     continue
 
                 # Start serial reader thread
@@ -186,8 +198,8 @@ class OfflineTelemetryLogger:
                         self.serial_conn.close()
                     if self.serial_thread and self.serial_thread.is_alive():
                         self.serial_thread.join(timeout=1)
-                    print("Reconnecting in 5 seconds...")
-                    time.sleep(5)
+                    print("Reconnecting in 2 seconds...")
+                    time.sleep(2)
 
         except KeyboardInterrupt:
             print("\nShutting down...")
@@ -199,6 +211,7 @@ class OfflineTelemetryLogger:
             if self.serial_thread and self.serial_thread.is_alive():
                 self.serial_thread.join(timeout=1)
             print(f"Session complete. Data saved to: {self.csv_file}")
+            print(f"Total packets lost: {self.packet_loss_count}")
 
 def main():
     parser = argparse.ArgumentParser(description='Offline field telemetry logger')
