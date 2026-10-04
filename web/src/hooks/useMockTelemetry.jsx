@@ -104,7 +104,7 @@ export function useTelemetry() {
         voltage: +telemetry.voltage.toFixed(2),
       };
       const next = [...prev, point];
-      return next.length > 80 ? next.slice(-80) : next;
+      return next.length > 200 ? next.slice(-200) : next;
     });
   }, [telemetry.raceTime]);
 

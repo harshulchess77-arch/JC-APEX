@@ -16,7 +16,10 @@ import serial.tools.list_ports
 import json
 import os
 import sys
+import time
 import argparse
+import queue
+import threading
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -31,6 +34,8 @@ class OfflineTelemetryLogger:
         self.session_id = self._generate_session_id()
         self.csv_file = f"session_{self.session_id}.csv"
         self.running = True
+        self.serial_queue = queue.Queue()
+        self.serial_thread: Optional[threading.Thread] = None
 
     def _generate_session_id(self) -> str:
         """Generate a unique session ID for this run"""
@@ -45,7 +50,7 @@ class OfflineTelemetryLogger:
 
         # Try to find likely ESP32 port (USB Serial Device)
         for port in ports:
-            if 'USB' in port.description or 'UART' in port.description:
+            if 'USB' in port.description or 'UART' in port.description or 'CP210' in port.description or 'CH340' in port.description:
                 print(f"Auto-detected: {port.device}")
                 return port.device
 
@@ -126,8 +131,25 @@ class OfflineTelemetryLogger:
             f.write(header)
         print(f"Initialized CSV file: {self.csv_file}")
 
+    def serial_reader_thread(self):
+        """Thread-safe serial reader that puts data into queue"""
+        while self.running and self.serial_conn and self.serial_conn.is_open:
+            try:
+                if self.serial_conn.in_waiting > 0:
+                    line = self.serial_conn.readline().decode('utf-8', errors='ignore')
+                    if line.strip():
+                        self.serial_queue.put(line.strip())
+                else:
+                    time.sleep(0.001)  # Small sleep to prevent CPU spinning
+            except serial.SerialException as e:
+                print(f"Serial read error in thread: {e}")
+                break
+            except Exception as e:
+                print(f"Unexpected error in serial thread: {e}")
+                break
+
     def run(self):
-        """Main loop with reconnect logic"""
+        """Main loop with reconnect logic and threaded serial reading"""
         print(f"Session ID: {self.session_id}")
         print(f"CSV Output: {self.csv_file}")
         print("Listening for telemetry data...")
@@ -136,35 +158,46 @@ class OfflineTelemetryLogger:
         # Initialize CSV file
         self.initialize_csv()
 
-        while self.running:
-            if not self.connect_serial():
-                print("Retrying in 5 seconds...")
-                import time
-                time.sleep(5)
-                continue
+        try:
+            while self.running:
+                if not self.connect_serial():
+                    print("Retrying in 5 seconds...")
+                    time.sleep(5)
+                    continue
 
-            try:
-                while self.running:
-                    if self.serial_conn.in_waiting > 0:
-                        line = self.serial_conn.readline().decode('utf-8', errors='ignore')
-                        if line.strip():
+                # Start serial reader thread
+                self.serial_thread = threading.Thread(target=self.serial_reader_thread, daemon=True)
+                self.serial_thread.start()
+
+                try:
+                    while self.running and self.serial_conn and self.serial_conn.is_open:
+                        # Process data from queue (non-blocking)
+                        try:
+                            line = self.serial_queue.get(timeout=0.1)
                             self.process_telemetry(line)
+                        except queue.Empty:
+                            continue
+                        except Exception as e:
+                            print(f"Error processing queue item: {e}")
 
-            except serial.SerialException as e:
-                print(f"Serial connection lost: {e}")
-                if self.serial_conn:
-                    self.serial_conn.close()
-                print("Reconnecting in 5 seconds...")
-                import time
-                time.sleep(5)
+                except serial.SerialException as e:
+                    print(f"Serial connection lost: {e}")
+                    if self.serial_conn:
+                        self.serial_conn.close()
+                    if self.serial_thread and self.serial_thread.is_alive():
+                        self.serial_thread.join(timeout=1)
+                    print("Reconnecting in 5 seconds...")
+                    time.sleep(5)
 
-            except KeyboardInterrupt:
-                print("\nShutting down...")
-                self.running = False
+        except KeyboardInterrupt:
+            print("\nShutting down...")
+            self.running = False
 
         finally:
             if self.serial_conn:
                 self.serial_conn.close()
+            if self.serial_thread and self.serial_thread.is_alive():
+                self.serial_thread.join(timeout=1)
             print(f"Session complete. Data saved to: {self.csv_file}")
 
 def main():

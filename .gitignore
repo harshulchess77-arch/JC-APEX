@@ -1,6 +1,16 @@
-#env
+# Environment files
 .env
 .env.*
+.env.local
+.env.production.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+session_*.csv
 
 # Logs
 /logs
@@ -11,10 +21,12 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Node
 node_modules
 dist
 dist-ssr
 *.local
+.next
 
 # Editor directories and files
 .vscode/*
@@ -27,6 +39,12 @@ dist-ssr
 *.sln
 *.sw?
 
-.env
 .vite
 base44/.app.jsonc
+
+# Additional web-specific exclusions
+web/.env
+web/.env.local
+web/.env.production.local
+web/dist
+web/.vite

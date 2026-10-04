@@ -13,6 +13,7 @@ export function useTelemetry(sessionId = null, enabled = true) {
   const [isConnected, setIsConnected] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
+  const [telemetryHistory, setTelemetryHistory] = useState([]);
 
   useEffect(() => {
     if (!enabled) {
@@ -45,6 +46,12 @@ export function useTelemetry(sessionId = null, enabled = true) {
           setActiveSessionId(data.session_id);
           setLastUpdate(new Date());
           setIsConnected(true);
+
+          // Cap telemetry history to latest 200 points
+          setTelemetryHistory(prev => {
+            const newHistory = [...prev, data];
+            return newHistory.length > 200 ? newHistory.slice(-200) : newHistory;
+          });
         }
       )
       .subscribe((status) => {
@@ -101,6 +108,7 @@ export function useTelemetry(sessionId = null, enabled = true) {
     isConnected,
     sessionId: activeSessionId,
     lastUpdate,
+    telemetryHistory,
     fetchSessionData,
     fetchSessionMetrics,
   };
