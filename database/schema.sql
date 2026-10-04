@@ -59,8 +59,8 @@ CREATE TABLE races (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Telemetry logs table
-CREATE TABLE telemetry_logs (
+-- Telemetry logs table (race telemetry)
+CREATE TABLE race_telemetry_logs (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   race_id UUID REFERENCES races(id) ON DELETE CASCADE,
   driver_id UUID REFERENCES drivers(id) ON DELETE SET NULL,
@@ -107,9 +107,9 @@ ON public.telemetry_logs (session_id, created_at DESC);
 CREATE INDEX idx_drivers_status ON drivers(status);
 CREATE INDEX idx_drivers_number ON drivers(number);
 CREATE INDEX idx_vehicle_configs_driver_id ON vehicle_configs(driver_id);
-CREATE INDEX idx_telemetry_logs_race_id ON telemetry_logs(race_id);
-CREATE INDEX idx_telemetry_logs_driver_id ON telemetry_logs(driver_id);
-CREATE INDEX idx_telemetry_logs_timestamp ON telemetry_logs(timestamp);
+CREATE INDEX idx_race_telemetry_logs_race_id ON race_telemetry_logs(race_id);
+CREATE INDEX idx_race_telemetry_logs_driver_id ON race_telemetry_logs(driver_id);
+CREATE INDEX idx_race_telemetry_logs_timestamp ON race_telemetry_logs(timestamp);
 CREATE INDEX idx_incident_reports_race_id ON incident_reports(race_id);
 CREATE INDEX idx_incident_reports_driver_id ON incident_reports(driver_id);
 
@@ -117,7 +117,7 @@ CREATE INDEX idx_incident_reports_driver_id ON incident_reports(driver_id);
 ALTER TABLE drivers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vehicle_configs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE races ENABLE ROW LEVEL SECURITY;
-ALTER TABLE telemetry_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE race_telemetry_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.telemetry_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE incident_reports ENABLE ROW LEVEL SECURITY;
 
@@ -141,23 +141,23 @@ CREATE POLICY "Authenticated users can insert races" ON races FOR INSERT WITH CH
 CREATE POLICY "Authenticated users can update races" ON races FOR UPDATE USING (auth.role() = 'authenticated');
 CREATE POLICY "Authenticated users can delete races" ON races FOR DELETE USING (auth.role() = 'authenticated');
 
--- Telemetry logs policies
-DROP POLICY IF EXISTS "Allow anon insert and select" ON telemetry_logs;
-DROP POLICY IF EXISTS "allow_anon_read" ON telemetry_logs;
-DROP POLICY IF EXISTS "allow_anon_insert" ON telemetry_logs;
+-- Race telemetry logs policies
+DROP POLICY IF EXISTS "Allow anon insert and select" ON race_telemetry_logs;
+DROP POLICY IF EXISTS "allow_anon_read" ON race_telemetry_logs;
+DROP POLICY IF EXISTS "allow_anon_insert" ON race_telemetry_logs;
 
-CREATE POLICY "allow_anon_read" ON telemetry_logs
+CREATE POLICY "allow_anon_read" ON race_telemetry_logs
 FOR SELECT
 TO anon
 USING (true);
 
-CREATE POLICY "allow_anon_insert" ON telemetry_logs
+CREATE POLICY "allow_anon_insert" ON race_telemetry_logs
 FOR INSERT
 TO anon
 WITH CHECK (true);
 
-CREATE POLICY "Authenticated users can update telemetry logs" ON telemetry_logs FOR UPDATE USING (auth.role() = 'authenticated');
-CREATE POLICY "Authenticated users can delete telemetry logs" ON telemetry_logs FOR DELETE USING (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users can update race telemetry logs" ON race_telemetry_logs FOR UPDATE USING (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users can delete race telemetry logs" ON race_telemetry_logs FOR DELETE USING (auth.role() = 'authenticated');
 
 -- Public telemetry logs policies (for hardware data)
 DROP POLICY IF EXISTS "public_allow_anon_read" ON public.telemetry_logs;
@@ -180,14 +180,41 @@ CREATE POLICY "Authenticated users can update incident reports" ON incident_repo
 CREATE POLICY "Authenticated users can delete incident reports" ON incident_reports FOR DELETE USING (auth.role() = 'authenticated');
 
 -- Hardware telemetry policies (cleanup - drop if exists from previous migration)
-DROP POLICY IF EXISTS "Hardware telemetry is publicly viewable" ON hardware_telemetry;
-DROP POLICY IF EXISTS "Anon users can insert hardware telemetry" ON hardware_telemetry;
-DROP POLICY IF EXISTS "Authenticated users can insert hardware telemetry" ON hardware_telemetry;
-DROP POLICY IF EXISTS "Authenticated users can update hardware telemetry" ON hardware_telemetry;
-DROP POLICY IF EXISTS "Authenticated users can delete hardware telemetry" ON hardware_telemetry;
+DO $$
+BEGIN
+  IF to_regclass('public.hardware_telemetry') IS NOT NULL THEN
+    IF EXISTS (SELECT 1 FROM pg_policy WHERE polname = 'Hardware telemetry is publicly viewable' AND polrelid = 'hardware_telemetry'::regclass) THEN
+      DROP POLICY "Hardware telemetry is publicly viewable" ON hardware_telemetry;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_policy WHERE polname = 'Anon users can insert hardware telemetry' AND polrelid = 'hardware_telemetry'::regclass) THEN
+      DROP POLICY "Anon users can insert hardware telemetry" ON hardware_telemetry;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_policy WHERE polname = 'Authenticated users can insert hardware telemetry' AND polrelid = 'hardware_telemetry'::regclass) THEN
+      DROP POLICY "Authenticated users can insert hardware telemetry" ON hardware_telemetry;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_policy WHERE polname = 'Authenticated users can update hardware telemetry' AND polrelid = 'hardware_telemetry'::regclass) THEN
+      DROP POLICY "Authenticated users can update hardware telemetry" ON hardware_telemetry;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_policy WHERE polname = 'Authenticated users can delete hardware telemetry' AND polrelid = 'hardware_telemetry'::regclass) THEN
+      DROP POLICY "Authenticated users can delete hardware telemetry" ON hardware_telemetry;
+    END IF;
+  END IF;
+END $$;
 
 -- Remove hardware_telemetry from realtime publication if it exists
-ALTER PUBLICATION supabase_realtime DROP TABLE IF EXISTS hardware_telemetry;
+DO $$
+BEGIN
+  IF to_regclass('public.hardware_telemetry') IS NOT NULL THEN
+    IF EXISTS (
+      SELECT 1 FROM pg_publication_tables
+      WHERE pubname = 'supabase_realtime'
+      AND schemaname = 'public'
+      AND tablename = 'hardware_telemetry'
+    ) THEN
+      ALTER PUBLICATION supabase_realtime DROP TABLE public.hardware_telemetry;
+    END IF;
+  END IF;
+END $$;
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -231,13 +258,13 @@ BEGIN
     EXTRACT(EPOCH FROM (MAX(tl.created_at) - MIN(tl.created_at))) as duration_seconds,
     AVG(tl.rssi) as avg_rssi,
     AVG(tl.snr) as avg_snr
-  FROM telemetry_logs tl
+  FROM public.telemetry_logs tl
   WHERE tl.session_id = session_id_param
   GROUP BY tl.session_id;
 END;
 $$ LANGUAGE plpgsql;
 
--- Enable Realtime on telemetry_logs table (idempotent)
+-- Enable Realtime on public.telemetry_logs table (idempotent)
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -252,3 +279,6 @@ END $$;
 
 -- Cleanup: Drop old hardware_telemetry table if it exists from previous migration
 DROP TABLE IF EXISTS hardware_telemetry CASCADE;
+
+-- Cleanup: Drop old telemetry_logs table if it exists from previous migration (renamed to race_telemetry_logs)
+DROP TABLE IF EXISTS telemetry_logs CASCADE;
