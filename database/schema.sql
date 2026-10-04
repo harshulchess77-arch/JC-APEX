@@ -94,8 +94,8 @@ CREATE TABLE IF NOT EXISTS public.telemetry_logs (
     session_id TEXT NOT NULL,
     packet_id BIGINT NOT NULL,
     current NUMERIC(8,2) NOT NULL,
-    rssi NUMERIC(5,1),
-    snr NUMERIC(5,1),
+    rssi NUMERIC(6,2),
+    snr NUMERIC(5,2),
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -118,6 +118,7 @@ ALTER TABLE drivers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vehicle_configs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE races ENABLE ROW LEVEL SECURITY;
 ALTER TABLE telemetry_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.telemetry_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE incident_reports ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies: Public read access, authenticated write access
@@ -141,14 +142,36 @@ CREATE POLICY "Authenticated users can update races" ON races FOR UPDATE USING (
 CREATE POLICY "Authenticated users can delete races" ON races FOR DELETE USING (auth.role() = 'authenticated');
 
 -- Telemetry logs policies
-CREATE POLICY "Allow anon insert and select" ON telemetry_logs
-FOR ALL
+DROP POLICY IF EXISTS "Allow anon insert and select" ON telemetry_logs;
+DROP POLICY IF EXISTS "allow_anon_read" ON telemetry_logs;
+DROP POLICY IF EXISTS "allow_anon_insert" ON telemetry_logs;
+
+CREATE POLICY "allow_anon_read" ON telemetry_logs
+FOR SELECT
 TO anon
-USING (true)
+USING (true);
+
+CREATE POLICY "allow_anon_insert" ON telemetry_logs
+FOR INSERT
+TO anon
 WITH CHECK (true);
 
 CREATE POLICY "Authenticated users can update telemetry logs" ON telemetry_logs FOR UPDATE USING (auth.role() = 'authenticated');
 CREATE POLICY "Authenticated users can delete telemetry logs" ON telemetry_logs FOR DELETE USING (auth.role() = 'authenticated');
+
+-- Public telemetry logs policies (for hardware data)
+DROP POLICY IF EXISTS "public_allow_anon_read" ON public.telemetry_logs;
+DROP POLICY IF EXISTS "public_allow_anon_insert" ON public.telemetry_logs;
+
+CREATE POLICY "public_allow_anon_read" ON public.telemetry_logs
+FOR SELECT
+TO anon
+USING (true);
+
+CREATE POLICY "public_allow_anon_insert" ON public.telemetry_logs
+FOR INSERT
+TO anon
+WITH CHECK (true);
 
 -- Incident reports policies
 CREATE POLICY "Incident reports are publicly viewable" ON incident_reports FOR SELECT USING (true);
@@ -214,8 +237,18 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Enable Realtime on telemetry_logs table
-ALTER PUBLICATION supabase_realtime ADD TABLE public.telemetry_logs;
+-- Enable Realtime on telemetry_logs table (idempotent)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime'
+    AND schemaname = 'public'
+    AND tablename = 'telemetry_logs'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.telemetry_logs;
+  END IF;
+END $$;
 
 -- Cleanup: Drop old hardware_telemetry table if it exists from previous migration
 DROP TABLE IF EXISTS hardware_telemetry CASCADE;

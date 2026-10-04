@@ -24,10 +24,11 @@ class DataSync:
     def __init__(self, csv_file: str):
         self.csv_file = csv_file
         self.supabase_url = os.getenv('SUPABASE_URL')
-        self.supabase_key = os.getenv('SUPABASE_ANON_KEY')
+        # Prefer service role key for admin operations, fall back to anon key
+        self.supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY') or os.getenv('SUPABASE_ANON_KEY') or os.getenv('SUPABASE_KEY')
 
         if not self.supabase_url or not self.supabase_key:
-            print("ERROR: SUPABASE_URL and SUPABASE_ANON_KEY must be set in .env file")
+            print("ERROR: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_ANON_KEY) must be set in .env file")
             sys.exit(1)
 
         # Build Supabase REST endpoint URL

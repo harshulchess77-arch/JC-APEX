@@ -1,8 +1,9 @@
 # Environment files
 .env
-.env.*
 .env.local
 .env.production.local
+# Allow .env.example files (templates)
+!.env.example
 
 # Python
 __pycache__/
@@ -11,6 +12,8 @@ __pycache__/
 *.so
 .Python
 session_*.csv
+# Allow .env.example
+!gateway/.env.example
 
 # Logs
 /logs
@@ -48,3 +51,5 @@ web/.env.local
 web/.env.production.local
 web/dist
 web/.vite
+# Allow .env.example
+!web/.env.example
