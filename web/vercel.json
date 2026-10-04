@@ -1,6 +1,8 @@
 {
   "version": 2,
   "outputDirectory": "dist",
+  "cleanUrls": true,
+  "trailingSlash": false,
   "rewrites": [
     {
       "source": "/(.*)",
