@@ -5,11 +5,11 @@
   "trailingSlash": false,
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
+      "source": "/assets/:path*",
+      "destination": "/assets/:path*"
     },
     {
-      "source": "/(.*)",
+      "source": "/:path((?!api).*)",
       "destination": "/index.html"
     }
   ]
