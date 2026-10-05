@@ -9,14 +9,25 @@ const Fallback = () => (
 );
 
 export default function PasscodeProtectedRoute() {
-  const { isAuthed, loading } = usePasscodeAuth();
+  const { isAuthed, role, userRole, loading } = usePasscodeAuth();
   const location = useLocation();
 
   if (loading) return <Fallback />;
 
-  // Not authenticated — redirect to login, preserving intended destination
+  // 1. Not authenticated — redirect to login, preserving intended destination
   if (!isAuthed) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // 2. Strict Role Access Control for Driver HUD (/driver):
+  // If a user tries to access /driver without the DGATSA@55 or RDGATSA@55 session, redirect them to /login
+  const effectiveRole = userRole || role;
+  if (location.pathname === '/driver') {
+    const isDriverAuthorized = effectiveRole === 'driver' || effectiveRole === 'director';
+    if (!isDriverAuthorized) {
+      console.warn(`[AUTH] Access to /driver denied for role: "${effectiveRole}". Requires DGATSA@55 or RDGATSA@55.`);
+      return <Navigate to="/login" state={{ from: location, unauthorized: true, requiredRole: 'driver' }} replace />;
+    }
   }
 
   return <Outlet />;

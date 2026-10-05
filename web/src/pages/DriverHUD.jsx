@@ -314,33 +314,43 @@ export default function DriverHUD() {
 
           {/* Sub metrics - simplified in focus mode */}
           {!focusMode ? (
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-5 flex-wrap justify-center max-w-xl">
               {[
                 { label: 'BATT',  value: `${telemetry.battery.toFixed(0)}%`, sub: telemetry.battery > 40 ? 'GOOD' : 'LOW', color: battColor },
-                { label: 'VOLTS', value: `${telemetry.voltage.toFixed(1)}V`, sub: telemetry.voltage > 44 ? '48V NOMINAL' : '48V SYSTEM', color: '#60a5fa' },
-                { label: 'AMPS',  value: `${telemetry.current.toFixed(1)}A`, sub: '', color: '#22d3ee' },
-                { label: 'WATTS', value: `${(telemetry.power != null ? telemetry.power : telemetry.current * telemetry.voltage).toFixed(0)}`, sub: 'W', color: '#a78bfa' },
+                { label: '48V SYSTEM', value: `${telemetry.voltage.toFixed(1)}V`, sub: telemetry.voltage > 44 ? '48V NOMINAL' : '48V SYSTEM', color: '#60a5fa' },
+                { label: 'AMPS',  value: `${telemetry.current.toFixed(1)}A`, sub: 'CURRENT', color: '#22d3ee' },
+                { label: 'MOTOR POWER', value: `${(telemetry.power != null ? telemetry.power : telemetry.current * telemetry.voltage).toFixed(0)}W`, sub: 'WATTS', color: '#a78bfa' },
+                { label: 'HALL SPEED', value: `${(telemetry.speed_hall != null ? telemetry.speed_hall : telemetry.speed).toFixed(1)}`, sub: 'MPH', color: '#ef4444' },
+                { label: 'GPS SPEED', value: `${(telemetry.speed_gps != null ? telemetry.speed_gps : telemetry.speed).toFixed(1)}`, sub: 'MPH', color: '#f59e0b' },
               ].map(m => (
-                <div key={m.label} className="text-center">
+                <div key={m.label} className="text-center px-1.5">
                   <div className="text-[7px] font-mono text-white/15 tracking-wider mb-0.5">{m.label}</div>
-                  <div className="text-2xl font-display font-black" style={{ color: m.color }}>{m.value}</div>
+                  <div className="text-xl font-display font-black" style={{ color: m.color }}>{m.value}</div>
                   {m.sub && <div className="text-[7px] font-mono text-white/20 mt-0.5">{m.sub}</div>}
                 </div>
               ))}
             </div>
           ) : (
-            <div className="flex items-center gap-10 mt-8">
+            <div className="flex items-center gap-8 mt-8 flex-wrap justify-center">
               <div className="text-center">
                 <div className="text-xl font-display font-black" style={{ color: battColor }}>{telemetry.battery.toFixed(0)}%</div>
-                <div className="text-xs font-mono text-white/30 mt-1">BATTERY</div>
+                <div className="text-[8px] font-mono text-white/30 mt-1">BATTERY</div>
               </div>
               <div className="text-center">
                 <div className="text-xl font-display font-black text-blue-400">{telemetry.voltage.toFixed(1)}V</div>
-                <div className="text-xs font-mono text-white/30 mt-1">48V TRACTIVE</div>
+                <div className="text-[8px] font-mono text-white/30 mt-1">48V SYSTEM</div>
               </div>
               <div className="text-center">
                 <div className="text-xl font-display font-black text-purple-400">{(telemetry.power != null ? telemetry.power : telemetry.current * telemetry.voltage).toFixed(0)}W</div>
-                <div className="text-xs font-mono text-white/30 mt-1">POWER</div>
+                <div className="text-[8px] font-mono text-white/30 mt-1">MOTOR POWER</div>
+              </div>
+              <div className="text-center">
+                <div className="text-xl font-display font-black text-red-400">{(telemetry.speed_hall != null ? telemetry.speed_hall : telemetry.speed).toFixed(1)}</div>
+                <div className="text-[8px] font-mono text-white/30 mt-1">HALL MPH</div>
+              </div>
+              <div className="text-center">
+                <div className="text-xl font-display font-black text-yellow-400">{(telemetry.speed_gps != null ? telemetry.speed_gps : telemetry.speed).toFixed(1)}</div>
+                <div className="text-[8px] font-mono text-white/30 mt-1">GPS MPH</div>
               </div>
             </div>
           )}

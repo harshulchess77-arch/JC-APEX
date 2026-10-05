@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Settings, Check, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Save, Settings, Check } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 
 const EMPTY = {

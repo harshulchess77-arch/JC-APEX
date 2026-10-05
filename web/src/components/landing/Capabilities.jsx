@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Activity, Brain, Radio, Box, Flag, Gauge, ArrowRight } from 'lucide-react';
+import { Activity, Brain, Radio, Box, Flag, Gauge } from 'lucide-react';
 
 const capabilities = [
   {

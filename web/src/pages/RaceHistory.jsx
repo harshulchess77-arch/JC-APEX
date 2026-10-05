@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, Trophy, ChevronDown, ChevronUp, Download } from 'lucide-react';
+import { ArrowLeft, Clock, ChevronDown, ChevronUp, Download } from 'lucide-react';
 
 const SESSIONS = [
   { id: 1, event: 'Round 8 — Metro Circuit',   date: '2026-07-20', laps: 14, duration: '42:18', pos: 1, battery_used: 78, peak_speed: 38.2, avg_speed: 24.1, incidents: 0, oracle: 'Push window used on laps 6–9. Optimal battery management.', status: 'WIN' },

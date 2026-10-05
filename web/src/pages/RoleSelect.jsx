@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Shield, ArrowRight, Eye, EyeOff, Cpu, Activity, Flag } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { ArrowRight, Eye, EyeOff, Cpu, Activity, Flag } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { usePasscodeAuth, ROLE_PASSCODES, VALID_PASSCODE, ROLE_DASHBOARDS } from '@/lib/PasscodeAuthContext';
+import { usePasscodeAuth } from '@/lib/PasscodeAuthContext';
 
 const ROLES = [
   {
     id: 'pit',
     label: 'PIT ENGINEER',
-    desc: 'Full command access — telemetry, Oracle, strategy, comms',
+    desc: 'Full command access — telemetry, Oracle, strategy, comms (PEGATSA@55)',
     icon: Cpu,
     route: '/pit',
     color: 'text-primary',
@@ -18,7 +18,7 @@ const ROLES = [
   {
     id: 'driver',
     label: 'DRIVER HUD',
-    desc: 'Heads-up display — speed, battery, Oracle alerts, pit comms',
+    desc: 'Heads-up display — speed, battery, Oracle alerts, pit comms (DGATSA@55)',
     icon: Activity,
     route: '/driver',
     color: 'text-green-500',
@@ -28,9 +28,9 @@ const ROLES = [
   {
     id: 'director',
     label: 'RACE DIRECTOR',
-    desc: 'Overview & flag control — system health, Oracle log, lap progress',
+    desc: 'Overview & flag control — system health, Oracle log, elevated pit access (RDGATSA@55)',
     icon: Flag,
-    route: '/director',
+    route: '/pit',
     color: 'text-yellow-500',
     activeBorder: 'border-yellow-500/40',
     activeBg: 'bg-yellow-500/5',
@@ -39,6 +39,7 @@ const ROLES = [
 
 export default function RoleSelect() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = usePasscodeAuth();
   const [selected, setSelected] = useState('pit');
   const [pin, setPin] = useState('');
@@ -46,22 +47,27 @@ export default function RoleSelect() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (location.state?.unauthorized) {
+      setError('Access to Driver HUD restricted. Requires Driver (DGATSA@55) or Race Director (RDGATSA@55) authentication.');
+    }
+  }, [location.state]);
+
   const handleEnter = async () => {
     setError('');
     if (!pin) { setError('Enter access password'); return; }
     const trimmed = pin.trim();
-    const requiredPass = ROLE_PASSCODES[selected];
-    const isValid = (trimmed === requiredPass) || (trimmed === VALID_PASSCODE) || (trimmed === '2025');
-    if (!isValid) {
-      setError(`Invalid password for ${ROLES.find(r => r.id === selected)?.label}`);
+
+    // Authenticate via universal login
+    const result = login(selected, trimmed);
+    if (!result.success) {
+      setError(`Invalid password for ${ROLES.find(r => r.id === selected)?.label || 'selected role'}. Enter a valid role passcode or DEMO@55`);
       return;
     }
+
     setLoading(true);
     await new Promise(r => setTimeout(r, 400));
-    // Set auth state in context + localStorage before navigating
-    login(selected, trimmed);
-    const role = ROLES.find(r => r.id === selected);
-    navigate(role.route);
+    navigate(result.route || '/pit');
   };
 
   const selectedRole = ROLES.find(r => r.id === selected);
@@ -161,7 +167,9 @@ export default function RoleSelect() {
               ? <p className="text-[11px] font-mono text-primary">{error}</p>
               : <span />
             }
-            <p className="text-[10px] font-mono text-muted-foreground/25">Live Telemetry Mode</p>
+            <p className="text-[10px] font-mono text-muted-foreground/35">
+              {pin.trim().toUpperCase() === 'DEMO@55' ? '⚡ Simulated Demo Mode' : 'Live Hardware Mode'}
+            </p>
           </div>
         </div>
 
@@ -169,7 +177,7 @@ export default function RoleSelect() {
         <button
           onClick={handleEnter}
           disabled={loading}
-          className={`w-full flex items-center justify-center gap-2.5 py-4 font-mono text-sm font-bold tracking-wider uppercase rounded transition-all disabled:opacity-60 ${
+          className={`w-full flex items-center justify-center gap-2.5 py-4 font-mono text-sm font-bold tracking-wider uppercase rounded transition-all disabled:opacity-60 cursor-pointer ${
             selected === 'pit' ? 'bg-primary text-primary-foreground glow-red hover:bg-primary/90' :
             selected === 'driver' ? 'bg-green-600 text-white hover:bg-green-700' :
             'bg-yellow-600 text-background hover:bg-yellow-700'
@@ -190,13 +198,14 @@ export default function RoleSelect() {
           <button
             type="button"
             onClick={() => {
-              login(selected, VALID_PASSCODE);
-              const role = ROLES.find(r => r.id === selected);
-              navigate(role.route);
+              const res = login('DEMO@55');
+              if (res.success) {
+                navigate(res.route || '/pit');
+              }
             }}
-            className="text-[10px] font-mono tracking-widest text-muted-foreground/40 hover:text-primary transition-colors uppercase py-1 px-3 rounded border border-white/5 hover:border-primary/30 hover:bg-primary/5"
+            className="text-[10px] font-mono tracking-widest text-muted-foreground/40 hover:text-primary transition-colors uppercase py-1.5 px-3.5 rounded border border-white/5 hover:border-primary/30 hover:bg-primary/5 cursor-pointer"
           >
-            ⚡ Bypass / Demo Mode (Field Presentation)
+            ⚡ Launch Demo Mode (DEMO@55)
           </button>
         </div>
 

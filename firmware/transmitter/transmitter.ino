@@ -11,31 +11,27 @@
  * CIRCUIT & WIRING SPECIFICATION:
  * ----------------------------------------------------------------------------
  * 1. 48V TRACTIVE BATTERY VOLTAGE MONITOR:
- *    - 48V Battery (+) -> 100kΩ (R1) -> ESP32 GPIO 3 (ADC1_CH2) -> 4.7kΩ (R2) -> GND
- *    - Max input at 54.6V (peak 13S/14S): 54.6V * (4.7 / 104.7) = 2.45V (< 3.3V ADC limit)
- *    - Divider Factor: (R1 + R2) / R2 = (100k + 4.7k) / 4.7k ≈ 22.2766
+ *    - Voltage Pin: ESP32 GPIO 19
+ *    - Divider values: R1 = 820000 (820kΩ, positive), R2 = 47000 (47kΩ, ground)
+ *    - Math multiplier: (820 + 47) / 47 = 18.4468
+ *    - Equation: trueVoltage = (analogRead(19) * 3.3 / 4095.0) * 18.4468;
  *
- * 2. WCS1600 CURRENT SENSOR (ADC1_CH0):
- *    - VCC -> 5V, GND -> GND
- *    - OUT -> 10kΩ (R1) -> ESP32 GPIO 1 -> 18kΩ (R2) -> GND
- *    - Divider Factor: (10k + 18k) / 18k ≈ 1.55556
- *    - Boot dynamic auto-zero calibration (100 samples)
- *    - Exponential Moving Average (EMA) filter for motor controller PWM noise
+ * 2. GPS INTEGRATION:
+ *    - Hardware UART: Serial1.begin(9600, SERIAL_8N1, 17, 15); // RX pin 17, TX pin 15
+ *    - Asynchronous parsing via TinyGPS++
  *
  * 3. MOTOR/WHEEL HALL EFFECT SPEED SENSOR:
- *    - Signal -> ESP32 GPIO 6 (Interrupt capable, internal pull-up)
- *    - Hardware interrupt increments pulse counter on FALLING edge
- *    - Speed calculated from RPM, gear ratio, and wheel circumference
+ *    - Signal Pin: ESP32 GPIO 7 (INPUT_PULLUP)
+ *    - Hardware interrupt: attachInterrupt(digitalPinToInterrupt(7), countPulse, FALLING);
+ *    - Non-blocking RPM and speed calculation
  *
- * 4. GPS MODULE (NEO-6M / U-BLOX):
- *    - VCC -> 3.3V/5V, GND -> GND
- *    - GPS TX -> ESP32 GPIO 19 (Serial1 RX)
- *    - GPS RX -> ESP32 GPIO 20 (Serial1 TX)
- *    - Baud: 9600 bps, parsed asynchronously via TinyGPS++
+ * 4. WCS1600 CURRENT SENSOR:
+ *    - Signal Pin: ESP32 GPIO 1 (ADC1_CH0)
+ *    - Boot dynamic auto-zero calibration & EMA filter
  *
- * 5. LORA PAYLOAD (Compact CSV at 5 Hz):
- *    packet_id,amps,volts,watts,speed_hall,speed_gps,lat,lng
- *    e.g. "105,45.20,49.80,2250.96,24.50,24.20,34.020000,-84.190000"
+ * 5. LORA TRANSMISSION & JSON SERIALIZATION:
+ *    - TX sends compressed CSV at 5 Hz: packet_id,amps,volts,watts,speed_hall,speed_gps
+ *    - RX catches packet, appends RSSI/SNR, and outputs strict JSON to Serial (115200 baud)
  *
  * REQUIRED ARDUINO IDE LIBRARIES:
  * - RadioLib (by Jan Gromes)
@@ -57,14 +53,14 @@
 
 // ADC Pins (ESP32-S3 ADC1)
 #define CURRENT_SENSOR_PIN    1   // GPIO 1 (ADC1_CH0) - WCS1600 Current Sensor
-#define BATTERY_VOLTAGE_PIN   3   // GPIO 3 (ADC1_CH2) - 48V Battery Resistor Divider
+#define BATTERY_VOLTAGE_PIN   19  // GPIO 19 - 48V Battery Resistor Divider (820k / 47k)
 
 // Hall Effect Speed Sensor
-#define HALL_SENSOR_PIN       6   // GPIO 6 - Interrupt-capable, non-boot pin
+#define HALL_SENSOR_PIN       7   // GPIO 7 - Assigned as INPUT_PULLUP with hardware interrupt
 
 // GPS Hardware UART (Serial1)
-#define GPS_RX_PIN            19  // ESP32 RX <- GPS TX
-#define GPS_TX_PIN            20  // ESP32 TX -> GPS RX
+#define GPS_RX_PIN            17  // ESP32 RX <- GPS TX (GPIO 17)
+#define GPS_TX_PIN            15  // ESP32 TX -> GPS RX (GPIO 15)
 #define GPS_BAUD_RATE         9600
 
 // SX1262 LoRa Pinout for Heltec WiFi LoRa 32 (V3)
@@ -74,8 +70,8 @@
 #define LORA_BUSY             13
 
 // Onboard OLED Pins & Power Control
-#define OLED_SDA              17
-#define OLED_SCL              18
+#define OLED_SDA              41  // Moved off GPIO 17 to prevent collision with GPS RX
+#define OLED_SCL              42
 #define OLED_RST              21
 #define VEXT_PIN              36
 #define SCREEN_WIDTH          128
@@ -98,11 +94,12 @@
 const float ADC_REF_VOLTAGE = 3.3f;
 const float ADC_MAX_COUNT = 4095.0f;
 
-// 48V Battery Voltage Divider: R1 = 100kΩ, R2 = 4.7kΩ
-// Factor = (100 + 4.7) / 4.7 ≈ 22.2765957
-const float BATT_R1 = 100000.0f;
-const float BATT_R2 = 4700.0f;
-const float BATT_VOLTAGE_DIVIDER_FACTOR = (BATT_R1 + BATT_R2) / BATT_R2;
+// 48V Battery Voltage Divider: R1 = 820000 (820kΩ, positive), R2 = 47000 (47kΩ, ground)
+// Math multiplier: (820 + 47) / 47 = 18.4468
+// Equation: trueVoltage = (analogRead(19) * 3.3 / 4095.0) * 18.4468;
+const float BATT_R1 = 820000.0f;
+const float BATT_R2 = 47000.0f;
+const float BATT_VOLTAGE_DIVIDER_FACTOR = 18.4468f;
 
 // WCS1600 Current Sensor: R1 = 10kΩ, R2 = 18kΩ
 // Factor = (10 + 18) / 18 ≈ 1.5555556
@@ -132,7 +129,6 @@ const unsigned long TX_INTERVAL_MS = 200; // 200 ms = 5 Hz update rate
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
 SX1262 radio = new Module(LORA_NSS, LORA_DIO1, LORA_NRST, LORA_BUSY);
-HardwareSerial SerialGPS(1);
 TinyGPSPlus gps;
 
 // State Variables
@@ -151,7 +147,7 @@ float currentSpeedHallMph = 0.0f;
 // 4. INTERRUPT SERVICE ROUTINE (ISR)
 // ============================================================================
 
-void IRAM_ATTR onHallSensorPulse() {
+void IRAM_ATTR countPulse() {
   unsigned long nowUs = micros();
   // Software debounce (ignore spurious noise pulses < 3ms, equivalent to > 150 mph)
   static unsigned long lastInterruptTimeUs = 0;
@@ -277,15 +273,9 @@ float readCurrentSensor() {
  * Equation: trueVoltage = (adcValue * 3.3 / 4095.0) * ((R1 + R2) / R2)
  */
 float readBatteryVoltage() {
-  // Take 4 quick samples and average to minimize high-frequency PWM switching noise
-  int rawSum = 0;
-  for (int i = 0; i < 4; i++) {
-    rawSum += analogRead(BATTERY_VOLTAGE_PIN);
-  }
-  float avgAdc = (float)rawSum / 4.0f;
-
-  float pinVolts = (avgAdc * ADC_REF_VOLTAGE) / ADC_MAX_COUNT;
-  float trueVoltage = pinVolts * BATT_VOLTAGE_DIVIDER_FACTOR;
+  // Equation: trueVoltage = (analogRead(19) * 3.3 / 4095.0) * 18.4468;
+  int rawAdc = analogRead(BATTERY_VOLTAGE_PIN);
+  float trueVoltage = ((float)rawAdc * 3.3f / 4095.0f) * 18.4468f;
 
   if (trueVoltage < 0.5f) {
     trueVoltage = 0.0f; // Clean zero baseline when pack is disconnected
@@ -330,8 +320,8 @@ void updateHallSpeed() {
  * Asynchronously pumps GPS UART stream into TinyGPS++ parser without blocking.
  */
 void updateGPS() {
-  while (SerialGPS.available() > 0) {
-    gps.encode(SerialGPS.read());
+  while (Serial1.available() > 0) {
+    gps.encode(Serial1.read());
   }
 }
 
@@ -354,17 +344,16 @@ void setup() {
   // Configure ADC inputs
   analogReadResolution(12);
   analogSetPinAttenuation(CURRENT_SENSOR_PIN, ADC_11db);  // Full-scale input ~3.3V
-  analogSetPinAttenuation(BATTERY_VOLTAGE_PIN, ADC_11db); // Full-scale input ~3.3V
+  analogSetPinAttenuation(BATTERY_VOLTAGE_PIN, ADC_11db); // Full-scale input ~3.3V (GPIO 19)
 
-  // Configure Hall Effect Sensor Pin with Interrupt
-  pinMode(HALL_SENSOR_PIN, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(HALL_SENSOR_PIN), onHallSensorPulse, FALLING);
-  Serial.printf("[HALL] Interrupt attached to GPIO %d\n", HALL_SENSOR_PIN);
+  // Configure Hall Effect Sensor (GPIO 7) as INPUT_PULLUP with hardware interrupt
+  pinMode(7, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(7), countPulse, FALLING);
+  Serial.printf("[HALL] Interrupt attached: GPIO 7, countPulse, FALLING\n");
 
-  // Initialize GPS UART on Serial1
-  SerialGPS.begin(GPS_BAUD_RATE, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
-  Serial.printf("[GPS] Serial1 initialized on RX: GPIO %d, TX: GPIO %d at %d baud\n",
-                GPS_RX_PIN, GPS_TX_PIN, GPS_BAUD_RATE);
+  // Initialize GPS UART on Serial1: Serial1.begin(9600, SERIAL_8N1, 17, 15); // RX pin 17, TX pin 15
+  Serial1.begin(9600, SERIAL_8N1, 17, 15);
+  Serial.printf("[GPS] Serial1 initialized on RX: GPIO 17, TX: GPIO 15 at 9600 baud\n");
 
   // Calibrate WCS1600 current sensor zero offset
   calibrateCurrentSensorZero();
@@ -427,23 +416,19 @@ void loop() {
     float batteryVolts = readBatteryVoltage();
     float powerWatts = batteryVolts * currentAmps;
 
-    // 3. Extract GPS Metrics (Speed & Geolocation)
+    // 3. Extract GPS Speed
     float gpsSpeedMph = gps.speed.isValid() ? (float)gps.speed.mph() : 0.0f;
-    float gpsLat = gps.location.isValid() ? (float)gps.location.lat() : 0.0f;
-    float gpsLng = gps.location.isValid() ? (float)gps.location.lng() : 0.0f;
 
     // 4. Construct Compact CSV LoRa Payload:
-    // Format: packet_id,amps,volts,watts,speed_hall,speed_gps,lat,lng
+    // Format: packet_id,amps,volts,watts,speed_hall,speed_gps
     char payload[96];
-    snprintf(payload, sizeof(payload), "%lu,%.2f,%.2f,%.2f,%.2f,%.2f,%.6f,%.6f",
+    snprintf(payload, sizeof(payload), "%lu,%.2f,%.2f,%.2f,%.2f,%.2f",
              packetId,
              currentAmps,
              batteryVolts,
              powerWatts,
              currentSpeedHallMph,
-             gpsSpeedMph,
-             gpsLat,
-             gpsLng);
+             gpsSpeedMph);
 
     // 5. Transmit packet over LoRa (Non-blocking / fast transmit)
     int state = radio.transmit(payload);

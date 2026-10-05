@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, BookOpen, Plus, Trash2, Download, Upload, Edit3, Check } from 'lucide-react';
+import { ArrowLeft, BookOpen, Plus, Trash2, Check } from 'lucide-react';
 
 const INITIAL_TEMPLATES = [
   { id: 1, name: 'Wet Weather Conservative', condition: 'RAIN', strategy: 'conserve', description: 'Reduced speed, maximum energy efficiency. Avoid wheel-spin. Target 60% throttle max.', tire_pressure: '28 PSI', gear_ratio: '5.8:1', tags: ['WET', 'SAFE'], active: false },

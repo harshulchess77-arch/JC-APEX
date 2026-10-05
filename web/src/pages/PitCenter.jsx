@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Users, LogIn, Zap, Gauge, Radio, ChevronRight, CheckCircle2, Car, Flag } from 'lucide-react';
+import { LogOut, Users, Zap, Gauge, CheckCircle2, Car, Flag, Download } from 'lucide-react';
 import { useTelemetry } from '../hooks/useTelemetry';
 import { useRealtimeTelemetry, COMMAND_TYPES, COMMAND_STATUS } from '../hooks/useRealtimeTelemetry';
 import { usePasscodeAuth } from '@/lib/PasscodeAuthContext';
+import { exportTelemetryPDF } from '@/utils/pdfExport';
 import SpeedDial from '../components/pit/SpeedDial';
 import OverviewTab from '../components/pit/OverviewTab';
 import OracleTab from '../components/pit/OracleTab';
@@ -77,6 +78,23 @@ export default function PitCenter() {
   } = useRealtimeTelemetry('pit');
   const [activeTab, setActiveTab] = useState('overview');
   const [sessionActive, setSessionActive] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+
+  const handleQuickExportPDF = async () => {
+    try {
+      setIsExportingPdf(true);
+      await exportTelemetryPDF({
+        sessionId: sessionId || 'JC-APEX-LIVE',
+        telemetry,
+        chartData,
+        telemetryHistory: telemetryHistory || []
+      });
+    } catch (err) {
+      console.error('Failed to export PDF:', err);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
 
   const battColor = telemetry.battery < 20 ? '#ef4444' : telemetry.battery < 40 ? '#eab308' : '#22c55e';
   const tempColor = telemetry.temp > 58 ? '#ef4444' : telemetry.temp > 46 ? '#eab308' : '#22d3ee';
@@ -146,6 +164,14 @@ export default function PitCenter() {
           <span className="text-[9px] font-mono text-white/20">
             {sessionActive ? '● SESSION LIVE' : '○ STANDBY'}
           </span>
+          <button
+            onClick={handleQuickExportPDF}
+            disabled={isExportingPdf}
+            className="flex items-center gap-1.5 px-3 py-1 rounded text-[10px] font-display font-bold tracking-wider uppercase transition-all border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer disabled:opacity-50"
+          >
+            <Download className="w-3 h-3" />
+            {isExportingPdf ? 'EXPORTING...' : 'EXPORT PDF'}
+          </button>
           <button onClick={() => setSessionActive(v => !v)}
             className={`flex items-center gap-2 px-3 py-1 rounded text-[10px] font-display font-bold tracking-widest uppercase transition-all ${
               sessionActive
@@ -165,10 +191,11 @@ export default function PitCenter() {
         <MetricChip label="BATTERY" value={`${telemetry.battery.toFixed(1)}%`} color={battColor} />
         <MetricChip label="TEMP" value={`${telemetry.temp.toFixed(1)}°C`} color={tempColor} />
         <MetricChip label="EFFICIENCY" value={`${telemetry.efficiency.toFixed(0)}%`} color="#a78bfa" />
-        <MetricChip label="POWER" value={`${(telemetry.current * telemetry.voltage).toFixed(0)}W`} color="#60a5fa" />
-        <MetricChip label="VOLTAGE" value={`${telemetry.voltage.toFixed(1)}V`} color="#60a5fa" />
+        <MetricChip label="POWER (WATTS)" value={`${(telemetry.power != null ? telemetry.power : telemetry.current * telemetry.voltage).toFixed(0)}W`} color="#60a5fa" />
+        <MetricChip label="48V VOLTAGE" value={`${telemetry.voltage.toFixed(1)}V`} color="#60a5fa" />
         <MetricChip label="CURRENT" value={`${telemetry.current.toFixed(1)}A`} color="#818cf8" />
-        <MetricChip label="SPEED" value={`${telemetry.speed.toFixed(1)}`} color="#ef4444" />
+        <MetricChip label="HALL SPEED" value={`${(telemetry.speed_hall != null ? telemetry.speed_hall : telemetry.speed).toFixed(1)}`} color="#ef4444" />
+        <MetricChip label="GPS SPEED" value={`${(telemetry.speed_gps != null ? telemetry.speed_gps : telemetry.speed).toFixed(1)}`} color="#f59e0b" />
         <MetricChip label="LAP" value={`#${Math.floor(telemetry.lap)}`} color="#22c55e" />
         <MetricChip label="DISTANCE" value={`${(Math.floor(telemetry.lap) * 0.25).toFixed(2)}mi`} color="#a78bfa" />
         <div className="ml-auto flex-shrink-0 px-3">

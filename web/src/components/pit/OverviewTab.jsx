@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { AreaChart, Area, ResponsiveContainer, Tooltip, LineChart, Line, XAxis, YAxis } from 'recharts';
-import { Zap, TrendingUp, TrendingDown, Cpu, Gauge, Activity, BatteryCharging } from 'lucide-react';
+import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
+import { TrendingUp, TrendingDown, Cpu, Activity } from 'lucide-react';
 
 const COLOR = {
   red:    '#ef4444',

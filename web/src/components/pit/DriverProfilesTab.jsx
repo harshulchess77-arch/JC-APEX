@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Shield, Trophy, Car, Plus, RefreshCw, CheckCircle2, ChevronRight } from 'lucide-react';
+import { User, Car, Plus, RefreshCw, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getDriverProfiles } from '@/lib/driverService';
 

@@ -12,12 +12,12 @@
  * ----------------------------------------------------------------------------
  * 1. Catch incoming 5 Hz LoRa packets via SX1262 DIO1 hardware interrupt.
  * 2. Unpack CSV payload:
- *      packet_id,amps,volts,watts,speed_hall,speed_gps,lat,lng
+ *      packet_id,amps,volts,watts,speed_hall,speed_gps
  * 3. Append physical RF signal metrics from SX1262:
  *      - RSSI (Received Signal Strength Indicator, dBm)
  *      - SNR (Signal-to-Noise Ratio, dB)
  * 4. Output a STRICT, SINGLE-LINE JSON OBJECT to Serial at 115200 baud:
- *      {"id": 105, "amps": 45.2, "volts": 49.8, "watts": 2250.96, "speed_h": 24.5, "speed_g": 24.2, "lat": 34.02, "lng": -84.19, "rssi": -60, "snr": 8.1}
+ *      {"id": 105, "amps": 45.2, "volts": 49.8, "watts": 2250.96, "speed_h": 24.5, "speed_g": 24.2, "rssi": -60, "snr": 8.1}
  *
  * CRITICAL SERIAL RULE:
  * - Suppress all other debug text or conversational messages on Serial during
@@ -152,7 +152,7 @@ void updateOLED(uint32_t pktId, float volts, float amps, float watts, float spee
 // ============================================================================
 
 void setup() {
-  // Start high-speed Serial connection for Gateway bridge
+  // Start high-speed Serial connection for Gateway bridge (SILENT - no boot messages)
   Serial.begin(SERIAL_BAUD);
 
   // Initialize Vext & OLED
@@ -209,16 +209,14 @@ void loop() {
       int rssi = radio.getRSSI();
       float snr = radio.getSNR();
 
-      // Variables to parse from CSV payload:
-      // packet_id,amps,volts,watts,speed_hall,speed_gps,lat,lng
+      // Variables to parse from 6-field CSV payload:
+      // packet_id,amps,volts,watts,speed_hall,speed_gps
       uint32_t packetId = 0;
       float amps = 0.0f;
       float volts = 0.0f;
       float watts = 0.0f;
       float speedHall = 0.0f;
       float speedGps = 0.0f;
-      float lat = 0.0f;
-      float lng = 0.0f;
 
       // Safe CSV tokenization
       char buffer[128];
@@ -235,26 +233,19 @@ void loop() {
           case 3: watts = atof(token); break;
           case 4: speedHall = atof(token); break;
           case 5: speedGps = atof(token); break;
-          case 6: lat = atof(token); break;
-          case 7: lng = atof(token); break;
           default: break;
         }
         token = strtok(NULL, ",");
         tokenIndex++;
       }
 
-      // If legacy 2-parameter packet ("id,current") was received
-      if (tokenIndex == 2) {
-        watts = volts * amps;
-      }
-
-      // If watts wasn't sent or calculated, compute it
+      // If watts wasn't calculated or sent, derive it
       if (watts == 0.0f && volts > 0.0f && amps > 0.0f) {
         watts = volts * amps;
       }
 
       // Construct STRICT JSON Serialization:
-      // Format: {"id": 105, "amps": 45.2, "volts": 49.8, "watts": 2250.96, "speed_h": 24.5, "speed_g": 24.2, "lat": 34.02, "lng": -84.19, "rssi": -60, "snr": 8.1}
+      // Format: {"id": 105, "amps": 45.2, "volts": 49.8, "watts": 2250.96, "speed_h": 24.5, "speed_g": 24.2, "rssi": -60, "snr": 8.1}
       StaticJsonDocument<256> doc;
       doc["id"] = packetId;
       doc["amps"] = round(amps * 100.0f) / 100.0f;
@@ -262,12 +253,10 @@ void loop() {
       doc["watts"] = round(watts * 100.0f) / 100.0f;
       doc["speed_h"] = round(speedHall * 100.0f) / 100.0f;
       doc["speed_g"] = round(speedGps * 100.0f) / 100.0f;
-      doc["lat"] = round(lat * 1000000.0f) / 1000000.0f;
-      doc["lng"] = round(lng * 1000000.0f) / 1000000.0f;
       doc["rssi"] = rssi;
       doc["snr"] = round(snr * 10.0f) / 10.0f;
 
-      // Print pure JSON to Serial for Python gateway
+      // Print strict single-line JSON to Serial for Python gateway (No debug strings)
       char jsonOutput[256];
       serializeJson(doc, jsonOutput);
       Serial.println(jsonOutput);

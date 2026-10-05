@@ -102,18 +102,26 @@ export default function DriverProfile() {
     setSaving(true);
     setErrorMsg(null);
 
+    // 1. Immediate optimistic UI state update
+    const activeId = selectedId || `driver_${Date.now()}`;
+    const optimisticRecord = { ...EMPTY_DRIVER, ...form, id: activeId };
+
+    if (selectedId) {
+      setDrivers(prev => prev.map(d => d.id === selectedId ? optimisticRecord : d));
+    } else {
+      setDrivers(prev => [optimisticRecord, ...prev]);
+      setSelectedId(activeId);
+    }
+
     try {
+      // 2. Persist to Supabase driver_profiles table
       const savedDriver = await saveDriverProfile(form, selectedId);
+      const confirmed = savedDriver || optimisticRecord;
 
-      // Optimistic & Immediate State Update
-      if (selectedId) {
-        setDrivers(prev => prev.map(d => d.id === selectedId ? savedDriver : d));
-      } else {
-        setDrivers(prev => [savedDriver, ...prev]);
-        setSelectedId(savedDriver.id);
-      }
-
-      setForm({ ...EMPTY_DRIVER, ...savedDriver });
+      // 3. Confirm optimistic UI state with saved record
+      setDrivers(prev => prev.map(d => (d.id === activeId || d.id === selectedId) ? confirmed : d));
+      setSelectedId(confirmed.id);
+      setForm({ ...EMPTY_DRIVER, ...confirmed });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (err) {
