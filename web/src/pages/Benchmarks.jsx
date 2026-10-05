@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Target } from 'lucide-react';
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
-import { useTelemetry } from '../hooks/useMockTelemetry';
+import { useTelemetry } from '../hooks/useTelemetry';
 
 const LEAGUE_BENCHMARKS = [
   { metric: 'Speed',       current: null, league_avg: 26.4, top_10: 31.2, unit: 'mph' },

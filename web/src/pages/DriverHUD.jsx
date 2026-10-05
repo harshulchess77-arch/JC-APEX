@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, Radio, CheckCircle2, LayoutDashboard, Flag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useTelemetry } from '../hooks/useMockTelemetry';
+import { useTelemetry } from '../hooks/useTelemetry';
 import { useRealtimeTelemetry, COMMAND_STATUS } from '../hooks/useRealtimeTelemetry';
 import { usePasscodeAuth } from '@/lib/PasscodeAuthContext';
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Activity } from 'lucide-react';
 import { AreaChart, Area, LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
-import { useTelemetry } from '../hooks/useMockTelemetry';
+import { useTelemetry } from '../hooks/useTelemetry';
 
 const tip = { contentStyle: { background: '#111', border: '1px solid rgba(255,255,255,0.06)', fontSize: 10, borderRadius: 4 }, labelStyle: { color: '#fff' } };
 

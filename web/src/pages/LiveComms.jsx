@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Radio, Send, Mic, MicOff } from 'lucide-react';
-import { useTelemetry } from '../hooks/useMockTelemetry';
+import { useTelemetry } from '../hooks/useTelemetry';
 import { motion } from 'framer-motion';
 
 const QUICK_CMDS = [

@@ -8,13 +8,43 @@ import { supabase } from '@/lib/supabaseClient';
  * This hook is designed to be non-intrusive - it only provides data
  * and does not modify any UI components or styling
  */
+const ZERO_TELEMETRY = {
+  speed: 0.00,
+  battery: 0,
+  temp: 0,
+  voltage: 0.00,
+  current: 0.00,
+  efficiency: 0,
+  lap: 0,
+  totalLaps: 0,
+  raceTime: 0,
+};
+
 export function useTelemetry(sessionId = null, enabled = true) {
   const [hardwareData, setHardwareData] = useState(null);
+  const [telemetry, setTelemetry] = useState(ZERO_TELEMETRY);
+  const [strategy, setStrategy] = useState('balanced');
+  const [flag, setFlag] = useState('green');
+  const [oracleMessages, setOracleMessages] = useState([]);
+  const [commsMessages, setCommsMessages] = useState([]);
+  const [chartData, setChartData] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
   const [telemetryHistory, setTelemetryHistory] = useState([]);
   const [isLive, setIsLive] = useState(false);
+
+  const formatTime = useCallback((seconds) => {
+    const s = typeof seconds === 'number' ? seconds : 0;
+    const m = Math.floor(s / 60).toString().padStart(2, '0');
+    const sec = (s % 60).toString().padStart(2, '0');
+    return `${m}:${sec}`;
+  }, []);
+
+  const sendCommand = useCallback((text) => {
+    const time = new Date().toLocaleTimeString([], { minute: '2-digit', second: '2-digit' });
+    setCommsMessages(prev => [...prev, { from: 'pit', text, time }]);
+  }, []);
 
   useEffect(() => {
     if (!enabled) {
@@ -35,8 +65,9 @@ export function useTelemetry(sessionId = null, enabled = true) {
         (payload) => {
           const data = payload.new;
 
+          const currentVal = Number(data.current || 0);
           setHardwareData({
-            current: data.current || 0,
+            current: currentVal,
             rssi: data.rssi || 0,
             snr: data.snr || 0,
             packetId: data.packet_id,
@@ -44,10 +75,33 @@ export function useTelemetry(sessionId = null, enabled = true) {
             sessionId: data.session_id,
           });
 
+          // Live incoming hardware updates metrics from 0.00 baseline
+          setTelemetry(prev => ({
+            ...prev,
+            current: currentVal,
+            power: Math.round(currentVal * (prev.voltage || 48.0)),
+          }));
+
           setActiveSessionId(data.session_id);
-          setLastUpdate(new Date());
+          const now = new Date();
+          setLastUpdate(now);
           setIsConnected(true);
           setIsLive(true);
+
+          // Update chartData with real hardware point
+          const timeStr = now.toLocaleTimeString([], { minute: '2-digit', second: '2-digit' });
+          setChartData(prev => {
+            const next = [...prev, {
+              time: timeStr,
+              current: currentVal,
+              speed: 0,
+              battery: 0,
+              temp: 0,
+              voltage: 0,
+              efficiency: 0,
+            }];
+            return next.length > 200 ? next.slice(-200) : next;
+          });
 
           // Cap telemetry history to latest 200 points
           setTelemetryHistory(prev => {
@@ -72,14 +126,19 @@ export function useTelemetry(sessionId = null, enabled = true) {
   }, [enabled, sessionId]);
 
   // Watchdog: isLive = true only while packets arrive within last 3000ms.
-  // Runs on a 1-second interval so isLive drops promptly when hardware goes idle.
+  // When idle, drop isLive to false and ensure live current sits at 0.00.
   useEffect(() => {
     const watchdog = setInterval(() => {
       if (!lastUpdate) {
         setIsLive(false);
+        setTelemetry(prev => ({ ...prev, current: 0.00 }));
         return;
       }
-      setIsLive((Date.now() - lastUpdate.getTime()) < 3000);
+      const alive = (Date.now() - lastUpdate.getTime()) < 3000;
+      setIsLive(alive);
+      if (!alive) {
+        setTelemetry(prev => ({ ...prev, current: 0.00 }));
+      }
     }, 1000);
     return () => clearInterval(watchdog);
   }, [lastUpdate]);
@@ -149,6 +208,18 @@ export function useTelemetry(sessionId = null, enabled = true) {
   }, []);
 
   return {
+    telemetry,
+    strategy, setStrategy,
+    flag, setFlag,
+    oracleMessages,
+    commsMessages,
+    chartData,
+    sendCommand,
+    formatTime,
+    estimatedLapsRemaining: 0,
+    signalLost: !isLive,
+    lastPacketTime: lastUpdate ? lastUpdate.getTime() : 0,
+    targetPace: '0 MPH',
     hardwareData,
     isConnected,
     isLive,

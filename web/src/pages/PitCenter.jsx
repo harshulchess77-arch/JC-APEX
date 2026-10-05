@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, Users, LogIn, Zap, Gauge, Radio, ChevronRight, CheckCircle2, Car, Flag } from 'lucide-react';
-import { useTelemetry } from '../hooks/useMockTelemetry';
+import { useTelemetry } from '../hooks/useTelemetry';
 import { useRealtimeTelemetry, COMMAND_TYPES, COMMAND_STATUS } from '../hooks/useRealtimeTelemetry';
 import { usePasscodeAuth } from '@/lib/PasscodeAuthContext';
 import SpeedDial from '../components/pit/SpeedDial';

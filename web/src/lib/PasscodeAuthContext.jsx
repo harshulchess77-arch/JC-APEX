@@ -3,6 +3,13 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 const PasscodeAuthContext = createContext(null);
 
 const STORAGE_KEY = 'jc_apex_passcode_auth';
+export const ROLE_PASSCODES = {
+  pit: 'PEGATSA@55',
+  driver: 'DGATSA@55',
+  director: 'RDGATSA@55',
+};
+
+// Legacy fallback passcode if needed for general tests
 export const VALID_PASSCODE = '2026';
 
 export const ROLE_DASHBOARDS = {
@@ -46,7 +53,9 @@ export const PasscodeAuthProvider = ({ children }) => {
   }, []);
 
   const login = (selectedRole, passcode) => {
-    if (passcode === VALID_PASSCODE && ROLE_DASHBOARDS[selectedRole]) {
+    const requiredPasscode = ROLE_PASSCODES[selectedRole];
+    const isCorrect = (passcode === requiredPasscode) || (passcode === VALID_PASSCODE);
+    if (isCorrect && ROLE_DASHBOARDS[selectedRole]) {
       setRole(selectedRole);
       setIsAuthed(true);
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ isAuthed: true, role: selectedRole }));

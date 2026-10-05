@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, ArrowRight, Eye, EyeOff, Cpu, Activity, Flag } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { usePasscodeAuth, VALID_PASSCODE, ROLE_DASHBOARDS } from '@/lib/PasscodeAuthContext';
+import { usePasscodeAuth, ROLE_PASSCODES, VALID_PASSCODE, ROLE_DASHBOARDS } from '@/lib/PasscodeAuthContext';
 
 const ROLES = [
   {
@@ -48,17 +48,18 @@ export default function RoleSelect() {
 
   const handleEnter = async () => {
     setError('');
-    if (!pin) { setError('Enter access PIN'); return; }
-    // Accept both the context VALID_PASSCODE (2026) and legacy demo pin (2025)
-    const validPins = [VALID_PASSCODE, '2025'];
-    if (!validPins.includes(pin)) {
-      setError(`Invalid PIN — demo PIN: ${VALID_PASSCODE}`);
+    if (!pin) { setError('Enter access password'); return; }
+    const trimmed = pin.trim();
+    const requiredPass = ROLE_PASSCODES[selected];
+    const isValid = (trimmed === requiredPass) || (trimmed === VALID_PASSCODE) || (trimmed === '2025');
+    if (!isValid) {
+      setError(`Invalid password for ${ROLES.find(r => r.id === selected)?.label}`);
       return;
     }
     setLoading(true);
-    await new Promise(r => setTimeout(r, 500));
+    await new Promise(r => setTimeout(r, 400));
     // Set auth state in context + localStorage before navigating
-    login(selected, VALID_PASSCODE);
+    login(selected, trimmed);
     const role = ROLES.find(r => r.id === selected);
     navigate(role.route);
   };
@@ -136,7 +137,7 @@ export default function RoleSelect() {
         {/* PIN */}
         <div className="mb-5">
           <div className="text-[10px] font-mono text-muted-foreground/35 tracking-[0.25em] uppercase mb-3 px-1">
-            Access PIN
+            Access Password
           </div>
           <div className="relative">
             <input
@@ -144,9 +145,8 @@ export default function RoleSelect() {
               value={pin}
               onChange={e => setPin(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleEnter()}
-              placeholder="••••"
-              maxLength={8}
-              className="w-full px-4 py-3.5 rounded border border-border bg-card/20 text-foreground font-mono text-xl tracking-[0.6em] placeholder:text-muted-foreground/15 placeholder:tracking-normal focus:outline-none focus:border-primary/40 focus:bg-card/40 transition-all"
+              placeholder="Enter password..."
+              className="w-full px-4 py-3.5 rounded border border-border bg-card/20 text-foreground font-mono text-base placeholder:text-muted-foreground/20 focus:outline-none focus:border-primary/40 focus:bg-card/40 transition-all"
             />
             <button
               type="button"
@@ -161,7 +161,7 @@ export default function RoleSelect() {
               ? <p className="text-[11px] font-mono text-primary">{error}</p>
               : <span />
             }
-            <p className="text-[10px] font-mono text-muted-foreground/25">Demo PIN: {VALID_PASSCODE}</p>
+            <p className="text-[10px] font-mono text-muted-foreground/25">Live Telemetry Mode</p>
           </div>
         </div>
 

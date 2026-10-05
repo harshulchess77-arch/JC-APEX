@@ -48,6 +48,7 @@ export function useRealtimeTelemetry(role = 'driver') {
   const [connectionMode, setConnectionMode] = useState('mock'); // 'websocket', 'supabase', 'mock'
   const [incomingCommands, setIncomingCommands] = useState([]);
   const [commandHistory, setCommandHistory] = useState([]);
+  const [driverTelemetry, setDriverTelemetry] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   
   const socketRef = useRef(null);
@@ -98,7 +99,9 @@ export function useRealtimeTelemetry(role = 'driver') {
         });
         socketRef.current.on('driver_status', (data) => {
           // Handle driver telemetry updates
-          console.log('Driver status update:', data);
+          if (data && data.telemetry) {
+            setDriverTelemetry(data.telemetry);
+          }
         });
       }
     } catch (error) {
@@ -144,7 +147,11 @@ export function useRealtimeTelemetry(role = 'driver') {
         })
         .on('broadcast', { event: 'driver_status' }, (payload) => {
           if (role === 'pit' || role === 'director') {
-            console.log('Driver status update:', payload.data);
+            if (payload?.payload?.telemetry) {
+              setDriverTelemetry(payload.payload.telemetry);
+            } else if (payload?.data?.telemetry) {
+              setDriverTelemetry(payload.data.telemetry);
+            }
           }
         })
         .subscribe((status) => {
@@ -265,6 +272,7 @@ export function useRealtimeTelemetry(role = 'driver') {
     isOnline,
     incomingCommands,
     commandHistory,
+    driverTelemetry,
     sendCommand,
     sendAck,
     broadcastDriverStatus,
