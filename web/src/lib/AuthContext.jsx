@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { supabase } from '@/lib/supabaseClient';
 
 const AuthContext = createContext();
 
@@ -13,10 +14,61 @@ export const AuthProvider = ({ children }) => {
   const [appPublicSettings, setAppPublicSettings] = useState(null);
 
   useEffect(() => {
-    // Skip Base44 auth check - using passcode auth instead
-    setIsLoadingPublicSettings(false);
-    setIsLoadingAuth(false);
-    setAuthChecked(true);
+    let isMounted = true;
+
+    // Safety fallback: Force disable loading screen after 2 seconds no matter what
+    const timer = setTimeout(() => {
+      if (isMounted) {
+        setIsLoadingAuth(false);
+        setIsLoadingPublicSettings(false);
+        setAuthChecked(true);
+      }
+    }, 2000);
+
+    try {
+      if (supabase?.auth?.getSession) {
+        supabase.auth.getSession().then(({ data }) => {
+          if (isMounted) {
+            const session = data?.session;
+            if (session?.user) {
+              setUser(session.user);
+              setIsAuthenticated(true);
+            }
+            setIsLoadingAuth(false);
+            setIsLoadingPublicSettings(false);
+            setAuthChecked(true);
+            clearTimeout(timer);
+          }
+        }).catch((err) => {
+          console.warn('Supabase auth session check failed, bypassing to demo mode:', err);
+          if (isMounted) {
+            setIsLoadingAuth(false);
+            setIsLoadingPublicSettings(false);
+            setAuthChecked(true);
+          }
+        });
+      } else {
+        if (isMounted) {
+          setIsLoadingAuth(false);
+          setIsLoadingPublicSettings(false);
+          setAuthChecked(true);
+          clearTimeout(timer);
+        }
+      }
+    } catch (err) {
+      console.warn('Auth check error, falling back:', err);
+      if (isMounted) {
+        setIsLoadingAuth(false);
+        setIsLoadingPublicSettings(false);
+        setAuthChecked(true);
+        clearTimeout(timer);
+      }
+    }
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
   }, []);
 
   const checkAppState = async () => {

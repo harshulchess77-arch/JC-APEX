@@ -17,6 +17,13 @@ export const PasscodeAuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
+    // Safety fallback: Force disable loading screen after 2 seconds
+    const timer = setTimeout(() => {
+      if (isMounted) setLoading(false);
+    }, 2000);
+
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
       if (saved && saved.isAuthed && saved.role && ROLE_DASHBOARDS[saved.role]) {
@@ -26,7 +33,16 @@ export const PasscodeAuthProvider = ({ children }) => {
     } catch {
       // ignore malformed storage
     }
-    setLoading(false);
+
+    if (isMounted) {
+      setLoading(false);
+      clearTimeout(timer);
+    }
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
   }, []);
 
   const login = (selectedRole, passcode) => {
