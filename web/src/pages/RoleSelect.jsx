@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, ArrowRight, Eye, EyeOff, Cpu, Activity, Flag } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { usePasscodeAuth, VALID_PASSCODE, ROLE_DASHBOARDS } from '@/lib/PasscodeAuthContext';
 
 const ROLES = [
   {
@@ -36,10 +37,9 @@ const ROLES = [
   },
 ];
 
-const DEMO_PIN = '2025';
-
 export default function RoleSelect() {
   const navigate = useNavigate();
+  const { login } = usePasscodeAuth();
   const [selected, setSelected] = useState('pit');
   const [pin, setPin] = useState('');
   const [showPin, setShowPin] = useState(false);
@@ -49,9 +49,16 @@ export default function RoleSelect() {
   const handleEnter = async () => {
     setError('');
     if (!pin) { setError('Enter access PIN'); return; }
-    if (pin !== DEMO_PIN) { setError('Invalid PIN — use: 2025'); return; }
+    // Accept both the context VALID_PASSCODE (2026) and legacy demo pin (2025)
+    const validPins = [VALID_PASSCODE, '2025'];
+    if (!validPins.includes(pin)) {
+      setError(`Invalid PIN — demo PIN: ${VALID_PASSCODE}`);
+      return;
+    }
     setLoading(true);
     await new Promise(r => setTimeout(r, 500));
+    // Set auth state in context + localStorage before navigating
+    login(selected, VALID_PASSCODE);
     const role = ROLES.find(r => r.id === selected);
     navigate(role.route);
   };
@@ -154,7 +161,7 @@ export default function RoleSelect() {
               ? <p className="text-[11px] font-mono text-primary">{error}</p>
               : <span />
             }
-            <p className="text-[10px] font-mono text-muted-foreground/25">Demo PIN: 2025</p>
+            <p className="text-[10px] font-mono text-muted-foreground/25">Demo PIN: {VALID_PASSCODE}</p>
           </div>
         </div>
 

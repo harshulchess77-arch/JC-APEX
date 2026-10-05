@@ -142,5 +142,8 @@ export function useTelemetry() {
     signalLost: false,
     lastPacketTime: Date.now(),
     targetPace: '25 MPH',
+    // Flags that clearly mark this as simulated demo data, never real hardware
+    isLive: false,
+    isMock: true,
   };
 }

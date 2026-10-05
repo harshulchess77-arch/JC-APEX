@@ -1,4 +1,4 @@
-import { Outlet, Navigate } from 'react-router-dom';
+import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import { usePasscodeAuth } from '@/lib/PasscodeAuthContext';
 
 const Fallback = () => (
@@ -10,13 +10,13 @@ const Fallback = () => (
 
 export default function PasscodeProtectedRoute() {
   const { isAuthed, loading } = usePasscodeAuth();
+  const location = useLocation();
 
   if (loading) return <Fallback />;
 
-  // Allow access even without auth for demo mode
-  // Remove this if you want strict authentication
+  // Not authenticated — redirect to login, preserving intended destination
   if (!isAuthed) {
-    return <Outlet />;
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   return <Outlet />;

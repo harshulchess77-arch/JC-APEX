@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Users, LogIn, Zap, Gauge, Radio, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { LogOut, Users, LogIn, Zap, Gauge, Radio, ChevronRight, CheckCircle2, Car, Flag } from 'lucide-react';
 import { useTelemetry } from '../hooks/useMockTelemetry';
 import { useRealtimeTelemetry, COMMAND_TYPES, COMMAND_STATUS } from '../hooks/useRealtimeTelemetry';
+import { usePasscodeAuth } from '@/lib/PasscodeAuthContext';
 import SpeedDial from '../components/pit/SpeedDial';
 import OverviewTab from '../components/pit/OverviewTab';
 import OracleTab from '../components/pit/OracleTab';
@@ -60,6 +61,7 @@ function MetricChip({ label, value, color }) {
 
 export default function PitCenter() {
   const navigate = useNavigate();
+  const { logout } = usePasscodeAuth();
   const {
     telemetry, strategy, setStrategy,
     flag, setFlag, oracleMessages, commsMessages,
@@ -106,8 +108,16 @@ export default function PitCenter() {
             <span className="text-white/15 text-xs font-mono ml-1">RACE INTELLIGENCE</span>
           </div>
           <div className="w-px h-4 bg-white/10" />
-          <button className="text-[9px] font-mono tracking-widest text-white/25 hover:text-white/50 transition-colors uppercase">
-            PIT COMMAND SUITE
+          <span className="text-[9px] font-mono tracking-widest text-primary font-bold uppercase px-2 py-0.5 rounded bg-primary/10 border border-primary/20">
+            PIT CENTER
+          </span>
+          <button onClick={() => navigate('/driver')}
+            className="flex items-center gap-1 text-[9px] font-mono tracking-widest text-white/40 hover:text-white transition-colors uppercase px-2 py-0.5 rounded hover:bg-white/5 border border-transparent hover:border-white/10">
+            <Car className="w-3 h-3" /> DRIVER HUD
+          </button>
+          <button onClick={() => navigate('/director')}
+            className="flex items-center gap-1 text-[9px] font-mono tracking-widest text-white/40 hover:text-white transition-colors uppercase px-2 py-0.5 rounded hover:bg-white/5 border border-transparent hover:border-white/10">
+            <Flag className="w-3 h-3" /> DIRECTOR
           </button>
           <button onClick={() => navigate('/drivers')}
             className="flex items-center gap-1 text-[9px] font-mono tracking-widest text-white/25 hover:text-white/50 transition-colors uppercase">
@@ -137,7 +147,7 @@ export default function PitCenter() {
             }`}>
             {sessionActive ? '■ TERMINATE' : '▶ INITIATE SESSION'}
           </button>
-          <button onClick={() => navigate('/')} className="text-white/15 hover:text-white/40 transition-colors">
+          <button onClick={() => { logout(); navigate('/login'); }} className="text-white/15 hover:text-white/40 transition-colors">
             <LogOut className="w-3.5 h-3.5" />
           </button>
         </div>

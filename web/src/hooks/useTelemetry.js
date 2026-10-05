@@ -71,21 +71,17 @@ export function useTelemetry(sessionId = null, enabled = true) {
     };
   }, [enabled, sessionId]);
 
-  // Health check: isLive = true if packet received within last 3000ms
+  // Watchdog: isLive = true only while packets arrive within last 3000ms.
+  // Runs on a 1-second interval so isLive drops promptly when hardware goes idle.
   useEffect(() => {
-    if (!lastUpdate) {
-      setIsLive(false);
-      return;
-    }
-
-    const now = new Date();
-    const timeSinceLastUpdate = now - lastUpdate;
-
-    if (timeSinceLastUpdate < 3000) {
-      setIsLive(true);
-    } else {
-      setIsLive(false);
-    }
+    const watchdog = setInterval(() => {
+      if (!lastUpdate) {
+        setIsLive(false);
+        return;
+      }
+      setIsLive((Date.now() - lastUpdate.getTime()) < 3000);
+    }, 1000);
+    return () => clearInterval(watchdog);
   }, [lastUpdate]);
 
   // Function to fetch latest session data (for historical charts)
@@ -162,5 +158,6 @@ export function useTelemetry(sessionId = null, enabled = true) {
     fetchSessionData,
     fetchSessionMetrics,
     fetchAvailableSessions,
+    isMock: false,
   };
 }

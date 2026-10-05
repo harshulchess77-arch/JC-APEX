@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { useTelemetry } from '../hooks/useMockTelemetry';
 import { useRealtimeTelemetry, COMMAND_TYPES, COMMAND_STATUS } from '../hooks/useRealtimeTelemetry';
+import { usePasscodeAuth } from '@/lib/PasscodeAuthContext';
 import FlagPanel from '../components/command/FlagPanel';
 
 const FLAG_STYLES = {
@@ -55,6 +56,7 @@ function StatusCard({ label, value, unit, color, trend, chart, data, dataKey }) 
 
 export default function RaceDirector() {
   const navigate = useNavigate();
+  const { logout } = usePasscodeAuth();
   const { telemetry, flag, setFlag, oracleMessages, chartData, formatTime } = useTelemetry();
   const { commandHistory, sendCommand: realtimeSendCommand } = useRealtimeTelemetry('director');
   const flagStyle = FLAG_STYLES[flag] || FLAG_STYLES.green;
@@ -110,7 +112,7 @@ export default function RaceDirector() {
             <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded border border-border bg-secondary/20 text-xs font-mono text-muted-foreground">
               LAP <span className="text-foreground font-bold ml-1">{Math.floor(telemetry.lap)}</span>/{telemetry.totalLaps}
             </div>
-            <button onClick={() => navigate('/')} className="p-1.5 text-muted-foreground/50 hover:text-muted-foreground">
+            <button onClick={() => { logout(); navigate('/login'); }} className="p-1.5 text-muted-foreground/50 hover:text-muted-foreground">
               <LogOut className="w-4 h-4" />
             </button>
           </div>

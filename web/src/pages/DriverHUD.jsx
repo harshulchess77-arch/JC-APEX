@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Radio, CheckCircle2 } from 'lucide-react';
+import { LogOut, Radio, CheckCircle2, LayoutDashboard, Flag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTelemetry } from '../hooks/useMockTelemetry';
 import { useRealtimeTelemetry, COMMAND_STATUS } from '../hooks/useRealtimeTelemetry';
+import { usePasscodeAuth } from '@/lib/PasscodeAuthContext';
 
 const FLAG_CFG = {
   green:  { border: 'border-green-500/30',  bg: 'bg-green-500/10',  text: 'text-green-400',  label: '● GREEN'  },
@@ -62,6 +63,7 @@ function BigArc({ value, max, color }) {
 
 export default function DriverHUD() {
   const navigate = useNavigate();
+  const { logout } = usePasscodeAuth();
   const { telemetry, flag, oracleMessages, commsMessages, formatTime, targetPace, signalLost, lastPacketTime } = useTelemetry();
   const { incomingCommands, sendAck, broadcastDriverStatus } = useRealtimeTelemetry('driver');
   const [focusMode, setFocusMode] = useState(false);
@@ -153,6 +155,14 @@ export default function DriverHUD() {
               </div>
               <span className="font-display font-black text-sm tracking-widest text-white">APEX</span>
             </div>
+            <button onClick={() => navigate('/pit')}
+              className="flex items-center gap-1 text-[8px] font-mono tracking-widest text-white/40 hover:text-white transition-colors uppercase px-1.5 py-0.5 rounded hover:bg-white/5 border border-transparent hover:border-white/10">
+              <LayoutDashboard className="w-2.5 h-2.5" /> PIT
+            </button>
+            <button onClick={() => navigate('/director')}
+              className="flex items-center gap-1 text-[8px] font-mono tracking-widest text-white/40 hover:text-white transition-colors uppercase px-1.5 py-0.5 rounded hover:bg-white/5 border border-transparent hover:border-white/10">
+              <Flag className="w-2.5 h-2.5" /> DIRECTOR
+            </button>
             <AnimatePresence mode="wait">
               <motion.span key={flag} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
                 className={`text-[8px] font-display font-bold tracking-widest px-2 py-0.5 rounded border ${flagCfg.border} ${flagCfg.bg} ${flagCfg.text} ${flagCfg.pulse ? 'animate-pulse' : ''}`}>
@@ -171,7 +181,7 @@ export default function DriverHUD() {
               <span className="font-bold">{signalStatus}</span>
             </div>
           </div>
-          <button onClick={() => navigate('/')} className="text-white/15 hover:text-white/40 transition-colors">
+          <button onClick={() => { logout(); navigate('/login'); }} className="text-white/15 hover:text-white/40 transition-colors">
             <LogOut className="w-3.5 h-3.5" />
           </button>
         </div>
