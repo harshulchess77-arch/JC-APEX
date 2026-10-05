@@ -1,17 +1,16 @@
 {
-  "builds": [
+  "buildCommand": "cd web && npm run build",
+  "outputDirectory": "dist",
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
     {
-      "src": "web/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
-    }
-  ],
-  "routes": [
+      "source": "/assets/:path*",
+      "destination": "/assets/:path*"
+    },
     {
-      "src": "/(.*)",
-      "dest": "/web/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
