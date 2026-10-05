@@ -142,6 +142,7 @@ unsigned long lastHallPulseTime = 0;
 unsigned long lastHallCalcTime = 0;
 unsigned long prevHallPulses = 0;
 float currentSpeedHallMph = 0.0f;
+float speed_gps = 0.0f;
 
 // ============================================================================
 // 4. INTERRUPT SERVICE ROUTINE (ISR)
@@ -351,9 +352,9 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(7), countPulse, FALLING);
   Serial.printf("[HALL] Interrupt attached: GPIO 7, countPulse, FALLING\n");
 
-  // Initialize GPS UART on Serial1: Serial1.begin(9600, SERIAL_8N1, 17, 15); // RX pin 17, TX pin 15
-  Serial1.begin(9600, SERIAL_8N1, 17, 15);
-  Serial.printf("[GPS] Serial1 initialized on RX: GPIO 17, TX: GPIO 15 at 9600 baud\n");
+  // Initialize GPS UART on Serial1
+  Serial1.begin(9600, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
+  Serial.printf("[GPS] Serial1 initialized on RX: GPIO %d, TX: GPIO %d at 9600 baud\n", GPS_RX_PIN, GPS_TX_PIN);
 
   // Calibrate WCS1600 current sensor zero offset
   calibrateCurrentSensorZero();
@@ -417,7 +418,7 @@ void loop() {
     float powerWatts = batteryVolts * currentAmps;
 
     // 3. Extract GPS Speed
-    float gpsSpeedMph = gps.speed.isValid() ? (float)gps.speed.mph() : 0.0f;
+    speed_gps = gps.speed.isValid() ? (float)gps.speed.mph() : 0.0f;
 
     // 4. Construct Compact CSV LoRa Payload:
     // Format: packet_id,amps,volts,watts,speed_hall,speed_gps
@@ -428,7 +429,7 @@ void loop() {
              batteryVolts,
              powerWatts,
              currentSpeedHallMph,
-             gpsSpeedMph);
+             speed_gps);
 
     // 5. Transmit packet over LoRa (Non-blocking / fast transmit)
     int state = radio.transmit(payload);
@@ -436,13 +437,13 @@ void loop() {
     // 6. Debug print to Serial Monitor
     if (state == RADIOLIB_ERR_NONE) {
       Serial.printf("[TX #%lu] %5.1fV | %5.2fA | %6.1fW | Hall: %4.1fmph | GPS: %4.1fmph | OK\n",
-                    packetId, batteryVolts, currentAmps, powerWatts, currentSpeedHallMph, gpsSpeedMph);
+                    packetId, batteryVolts, currentAmps, powerWatts, currentSpeedHallMph, speed_gps);
     } else {
       Serial.printf("[TX #%lu] TX FAILED (Code %d)\n", packetId, state);
     }
 
     // 7. Update Onboard OLED Screen
-    updateOLED(packetId, batteryVolts, currentAmps, powerWatts, currentSpeedHallMph, gpsSpeedMph, state);
+    updateOLED(packetId, batteryVolts, currentAmps, powerWatts, currentSpeedHallMph, speed_gps, state);
 
     // Increment packet ID
     packetId++;
