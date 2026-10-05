@@ -88,16 +88,31 @@ CREATE TABLE incident_reports (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Telemetry logs table for real-time hardware data
+-- Telemetry logs table for real-time hardware data (Electrothon 48V Tractive System)
 CREATE TABLE IF NOT EXISTS public.telemetry_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     session_id TEXT NOT NULL,
     packet_id BIGINT NOT NULL,
     current NUMERIC(8,2) NOT NULL,
+    voltage NUMERIC(8,2) DEFAULT 0.00,
+    power NUMERIC(8,2) DEFAULT 0.00,
+    speed_hall NUMERIC(8,2) DEFAULT 0.00,
+    speed_gps NUMERIC(8,2) DEFAULT 0.00,
+    latitude NUMERIC(10,6) DEFAULT 0.00,
+    longitude NUMERIC(10,6) DEFAULT 0.00,
     rssi NUMERIC(6,2),
     snr NUMERIC(5,2),
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Ensure columns exist for existing databases
+ALTER TABLE public.telemetry_logs
+ADD COLUMN IF NOT EXISTS voltage NUMERIC(8,2) DEFAULT 0.00,
+ADD COLUMN IF NOT EXISTS power NUMERIC(8,2) DEFAULT 0.00,
+ADD COLUMN IF NOT EXISTS speed_hall NUMERIC(8,2) DEFAULT 0.00,
+ADD COLUMN IF NOT EXISTS speed_gps NUMERIC(8,2) DEFAULT 0.00,
+ADD COLUMN IF NOT EXISTS latitude NUMERIC(10,6) DEFAULT 0.00,
+ADD COLUMN IF NOT EXISTS longitude NUMERIC(10,6) DEFAULT 0.00;
 
 -- Index session_id and created_at for fast time-series filtering
 CREATE INDEX IF NOT EXISTS idx_telemetry_session_time

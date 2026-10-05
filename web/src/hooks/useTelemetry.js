@@ -1,19 +1,24 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 
 /**
  * Hook for listening to real-time hardware telemetry from Supabase
  * Connects to postgres_changes events on telemetry_logs table
  *
- * This hook is designed to be non-intrusive - it only provides data
- * and does not modify any UI components or styling
+ * Designed for Electrothon 48V tractive system, motor Hall speed, and GPS metrics.
+ * Non-intrusive - provides data and zero-baseline watchdog.
  */
 const ZERO_TELEMETRY = {
   speed: 0.00,
+  speed_hall: 0.00,
+  speed_gps: 0.00,
   battery: 0,
   temp: 0,
   voltage: 0.00,
   current: 0.00,
+  power: 0.00,
+  latitude: 0.00,
+  longitude: 0.00,
   efficiency: 0,
   lap: 0,
   totalLaps: 0,
@@ -51,7 +56,7 @@ export function useTelemetry(sessionId = null, enabled = true) {
       return;
     }
 
-    // Subscribe to Supabase Realtime postgres_changes
+    // Subscribe to Supabase Realtime postgres_changes on telemetry_logs
     const channel = supabase
       .channel('live-telemetry')
       .on(
@@ -65,12 +70,40 @@ export function useTelemetry(sessionId = null, enabled = true) {
         (payload) => {
           const data = payload.new;
 
-          const currentVal = Number(data.current || 0);
+          // Parse expanded 48V, speed and GPS fields with defensive fallbacks
+          const currentVal = Number(data.current != null ? data.current : (data.amps != null ? data.amps : 0));
+          const voltageVal = Number(data.voltage != null ? data.voltage : (data.volts != null ? data.volts : 0));
+          const powerVal = Number(
+            data.power != null
+              ? data.power
+              : (data.watts != null ? data.watts : (currentVal * voltageVal))
+          );
+          const speedHallVal = Number(data.speed_hall != null ? data.speed_hall : (data.speed_h != null ? data.speed_h : 0));
+          const speedGpsVal = Number(data.speed_gps != null ? data.speed_gps : (data.speed_g != null ? data.speed_g : 0));
+          // Live vehicle speed: prefer Hall sensor, fall back to GPS speed
+          const speedVal = speedHallVal > 0 ? speedHallVal : speedGpsVal;
+          const latVal = Number(data.latitude != null ? data.latitude : (data.lat != null ? data.lat : 0));
+          const lngVal = Number(data.longitude != null ? data.longitude : (data.lng != null ? data.lng : 0));
+
+          // Calculate estimated battery percentage from 48V pack
+          // 48V Li-ion pack: ~42.0V (0% empty) to ~54.6V (100% full)
+          let batteryPct = 0;
+          if (voltageVal > 30.0) {
+            batteryPct = Math.max(0, Math.min(100, Math.round(((voltageVal - 42.0) / (54.6 - 42.0)) * 100)));
+          }
+
           setHardwareData({
             current: currentVal,
+            voltage: voltageVal,
+            power: powerVal,
+            speedHall: speedHallVal,
+            speedGps: speedGpsVal,
+            speed: speedVal,
+            latitude: latVal,
+            longitude: lngVal,
             rssi: data.rssi || 0,
             snr: data.snr || 0,
-            packetId: data.packet_id,
+            packetId: data.packet_id || data.id,
             timestamp: data.created_at,
             sessionId: data.session_id,
           });
@@ -79,7 +112,15 @@ export function useTelemetry(sessionId = null, enabled = true) {
           setTelemetry(prev => ({
             ...prev,
             current: currentVal,
-            power: Math.round(currentVal * (prev.voltage || 48.0)),
+            voltage: voltageVal,
+            power: powerVal,
+            speed: speedVal,
+            speed_hall: speedHallVal,
+            speed_gps: speedGpsVal,
+            latitude: latVal,
+            longitude: lngVal,
+            battery: batteryPct > 0 ? batteryPct : (voltageVal === 0 ? 0 : prev.battery),
+            efficiency: speedVal > 0 ? Math.min(100, Math.round((speedVal / 35.0) * 100)) : 0,
           }));
 
           setActiveSessionId(data.session_id);
@@ -94,11 +135,14 @@ export function useTelemetry(sessionId = null, enabled = true) {
             const next = [...prev, {
               time: timeStr,
               current: currentVal,
-              speed: 0,
-              battery: 0,
+              voltage: voltageVal,
+              power: powerVal,
+              speed: speedVal,
+              speed_hall: speedHallVal,
+              speed_gps: speedGpsVal,
+              battery: batteryPct,
               temp: 0,
-              voltage: 0,
-              efficiency: 0,
+              efficiency: speedVal > 0 ? Math.min(100, Math.round((speedVal / 35.0) * 100)) : 0,
             }];
             return next.length > 200 ? next.slice(-200) : next;
           });
@@ -125,23 +169,53 @@ export function useTelemetry(sessionId = null, enabled = true) {
     };
   }, [enabled, sessionId]);
 
-  // Watchdog: isLive = true only while packets arrive within last 3000ms.
-  // When idle, drop isLive to false and ensure live current sits at 0.00.
+  // Zero-Baseline Safeguard Watchdog:
+  // If the hardware disconnects (no packets for >3000ms), gracefully drop UI live metrics
+  // (Amps, Volts, Watts, Speed) to 0.00 to prevent displaying frozen/stale data during a vehicle fault.
   useEffect(() => {
     const watchdog = setInterval(() => {
       if (!lastUpdate) {
         setIsLive(false);
-        setTelemetry(prev => ({ ...prev, current: 0.00 }));
+        setTelemetry(prev => ({
+          ...prev,
+          current: 0.00,
+          voltage: 0.00,
+          power: 0.00,
+          speed: 0.00,
+          speed_hall: 0.00,
+          speed_gps: 0.00,
+        }));
         return;
       }
       const alive = (Date.now() - lastUpdate.getTime()) < 3000;
       setIsLive(alive);
       if (!alive) {
-        setTelemetry(prev => ({ ...prev, current: 0.00 }));
+        setTelemetry(prev => ({
+          ...prev,
+          current: 0.00,
+          voltage: 0.00,
+          power: 0.00,
+          speed: 0.00,
+          speed_hall: 0.00,
+          speed_gps: 0.00,
+        }));
       }
     }, 1000);
     return () => clearInterval(watchdog);
   }, [lastUpdate]);
+
+  // Helper Alerts for dashboard compatibility
+  const thermalAlert = useMemo(() => ({
+    level: telemetry.temp > 58 ? 'critical' : telemetry.temp > 46 ? 'warning' : 'nominal',
+    color: telemetry.temp > 58 ? '#ef4444' : telemetry.temp > 46 ? '#eab308' : '#22c55e',
+    flashing: telemetry.temp > 58,
+  }), [telemetry.temp]);
+
+  const voltageAlert = useMemo(() => ({
+    level: (telemetry.voltage < 42.0 && telemetry.voltage > 0) ? 'critical' : (telemetry.voltage < 45.0 && telemetry.voltage > 0) ? 'warning' : 'nominal',
+    color: (telemetry.voltage < 42.0 && telemetry.voltage > 0) ? '#ef4444' : (telemetry.voltage < 45.0 && telemetry.voltage > 0) ? '#eab308' : '#60a5fa',
+    flashing: (telemetry.voltage < 42.0 && telemetry.voltage > 0),
+  }), [telemetry.voltage]);
 
   // Function to fetch latest session data (for historical charts)
   const fetchSessionData = useCallback(async (sessionIdParam, limit = 100) => {
@@ -187,7 +261,6 @@ export function useTelemetry(sessionId = null, enabled = true) {
 
       if (error) throw error;
 
-      // Get unique session IDs with their latest timestamp
       const sessionMap = new Map();
       data.forEach(record => {
         if (!sessionMap.has(record.session_id)) {
@@ -195,7 +268,6 @@ export function useTelemetry(sessionId = null, enabled = true) {
         }
       });
 
-      // Convert to array and sort by timestamp descending
       const sessions = Array.from(sessionMap.entries())
         .map(([sessionId, createdAt]) => ({ sessionId, createdAt }))
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -219,7 +291,10 @@ export function useTelemetry(sessionId = null, enabled = true) {
     estimatedLapsRemaining: 0,
     signalLost: !isLive,
     lastPacketTime: lastUpdate ? lastUpdate.getTime() : 0,
-    targetPace: '0 MPH',
+    targetPace: { label: '25 MPH', zone: 'green', color: '#22c55e' },
+    power: telemetry.power || Math.round(telemetry.current * telemetry.voltage),
+    thermalAlert,
+    voltageAlert,
     hardwareData,
     isConnected,
     isLive,

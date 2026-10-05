@@ -317,9 +317,9 @@ export default function DriverHUD() {
             <div className="flex items-center gap-6">
               {[
                 { label: 'BATT',  value: `${telemetry.battery.toFixed(0)}%`, sub: telemetry.battery > 40 ? 'GOOD' : 'LOW', color: battColor },
-                { label: 'TEMP',  value: `${telemetry.temp.toFixed(0)}°`,    sub: telemetry.temp < 50 ? 'NOMINAL' : 'HIGH', color: tempColor },
-                { label: 'EFF',   value: `${telemetry.efficiency.toFixed(0)}%`, sub: '', color: '#a78bfa' },
-                { label: 'WATTS', value: `${(telemetry.current * telemetry.voltage).toFixed(0)}`, sub: 'W', color: '#60a5fa' },
+                { label: 'VOLTS', value: `${telemetry.voltage.toFixed(1)}V`, sub: telemetry.voltage > 44 ? '48V NOMINAL' : '48V SYSTEM', color: '#60a5fa' },
+                { label: 'AMPS',  value: `${telemetry.current.toFixed(1)}A`, sub: '', color: '#22d3ee' },
+                { label: 'WATTS', value: `${(telemetry.power != null ? telemetry.power : telemetry.current * telemetry.voltage).toFixed(0)}`, sub: 'W', color: '#a78bfa' },
               ].map(m => (
                 <div key={m.label} className="text-center">
                   <div className="text-[7px] font-mono text-white/15 tracking-wider mb-0.5">{m.label}</div>
@@ -329,14 +329,18 @@ export default function DriverHUD() {
               ))}
             </div>
           ) : (
-            <div className="flex items-center gap-12 mt-8">
+            <div className="flex items-center gap-10 mt-8">
               <div className="text-center">
                 <div className="text-xl font-display font-black" style={{ color: battColor }}>{telemetry.battery.toFixed(0)}%</div>
-                <div className="text-sm font-mono text-white/30 mt-1">BATTERY</div>
+                <div className="text-xs font-mono text-white/30 mt-1">BATTERY</div>
               </div>
               <div className="text-center">
-                <div className="text-xl font-display font-black" style={{ color: battColor }}>{telemetry.voltage.toFixed(1)}V</div>
-                <div className="text-sm font-mono text-white/30 mt-1">VOLTAGE</div>
+                <div className="text-xl font-display font-black text-blue-400">{telemetry.voltage.toFixed(1)}V</div>
+                <div className="text-xs font-mono text-white/30 mt-1">48V TRACTIVE</div>
+              </div>
+              <div className="text-center">
+                <div className="text-xl font-display font-black text-purple-400">{(telemetry.power != null ? telemetry.power : telemetry.current * telemetry.voltage).toFixed(0)}W</div>
+                <div className="text-xs font-mono text-white/30 mt-1">POWER</div>
               </div>
             </div>
           )}
