@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Save, Trash2, ChevronLeft, User, Trophy, Settings2, StickyNote, Check } from 'lucide-react';
+import { Plus, Save, Trash2, ChevronLeft, User, Trophy, Settings2, StickyNote, Check, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { supabase } from '@/lib/supabaseClient';
+import { getDriverProfiles, saveDriverProfile, deleteDriverProfile } from '@/lib/driverService';
 
 const TABS = [
   { id: 'profile', label: 'PROFILE', icon: User },
@@ -56,87 +56,91 @@ export default function DriverProfile() {
   const [activeTab, setActiveTab] = useState('profile');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchDrivers = async () => {
-      const { data, error } = await supabase
-        .from('drivers')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error('Error fetching drivers:', error);
-      } else {
-        setDrivers(data);
-        if (data.length > 0) { setSelectedId(data[0].id); setForm({ ...EMPTY_DRIVER, ...data[0] }); }
+  const fetchDrivers = async () => {
+    try {
+      const data = await getDriverProfiles();
+      setDrivers(data);
+      if (data.length > 0) {
+        // If current selectedId still exists in list, keep it; else pick first
+        const current = data.find(d => d.id === selectedId) || data[0];
+        setSelectedId(current.id);
+        setForm({ ...EMPTY_DRIVER, ...current });
       }
+    } catch (err) {
+      console.error('Error fetching drivers:', err);
+    } finally {
       setLoading(false);
-    };
+    }
+  };
+
+  useEffect(() => {
     fetchDrivers();
   }, []);
 
-  const selectDriver = (d) => { setSelectedId(d.id); setForm({ ...EMPTY_DRIVER, ...d }); };
-  const handleNew = () => { setSelectedId(null); setForm(EMPTY_DRIVER); setActiveTab('profile'); };
+  const selectDriver = (d) => {
+    setSelectedId(d.id);
+    setForm({ ...EMPTY_DRIVER, ...d });
+    setErrorMsg(null);
+  };
+
+  const handleNew = () => {
+    setSelectedId(null);
+    setForm(EMPTY_DRIVER);
+    setActiveTab('profile');
+    setErrorMsg(null);
+  };
 
   const handleSave = async () => {
-    setSaving(true);
-    const payload = {
-      ...form,
-      age: Number(form.age) || 0, weight_kg: Number(form.weight_kg) || 0,
-      experience_years: Number(form.experience_years) || 0,
-      wins: Number(form.wins) || 0, podiums: Number(form.podiums) || 0,
-      races_entered: Number(form.races_entered) || 0,
-    };
-    let updated;
-    if (selectedId) {
-      const { data, error } = await supabase
-        .from('drivers')
-        .update(payload)
-        .eq('id', selectedId)
-        .select()
-        .single();
-      if (error) {
-        console.error('Error updating driver:', error);
-        setSaving(false);
-        return;
-      }
-      updated = data;
-      setDrivers(prev => prev.map(d => d.id === selectedId ? updated : d));
-    } else {
-      const { data, error } = await supabase
-        .from('drivers')
-        .insert(payload)
-        .select()
-        .single();
-      if (error) {
-        console.error('Error creating driver:', error);
-        setSaving(false);
-        return;
-      }
-      updated = data;
-      setDrivers(prev => [updated, ...prev]);
-      setSelectedId(updated.id);
+    if (!form.name || !form.name.trim()) {
+      setErrorMsg('Driver Full Name is required.');
+      return;
     }
-    setForm({ ...EMPTY_DRIVER, ...updated });
-    setSaving(false); setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+
+    setSaving(true);
+    setErrorMsg(null);
+
+    try {
+      const savedDriver = await saveDriverProfile(form, selectedId);
+
+      // Optimistic & Immediate State Update
+      if (selectedId) {
+        setDrivers(prev => prev.map(d => d.id === selectedId ? savedDriver : d));
+      } else {
+        setDrivers(prev => [savedDriver, ...prev]);
+        setSelectedId(savedDriver.id);
+      }
+
+      setForm({ ...EMPTY_DRIVER, ...savedDriver });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (err) {
+      console.error('Failed to save driver:', err);
+      setErrorMsg(err.message || 'Failed to save driver profile.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async () => {
     if (!selectedId) return;
-    const { error } = await supabase
-      .from('drivers')
-      .delete()
-      .eq('id', selectedId);
-    if (error) {
-      console.error('Error deleting driver:', error);
-      return;
+    try {
+      await deleteDriverProfile(selectedId);
+      const remaining = drivers.filter(d => d.id !== selectedId);
+      setDrivers(remaining);
+      if (remaining.length > 0) {
+        setSelectedId(remaining[0].id);
+        setForm({ ...EMPTY_DRIVER, ...remaining[0] });
+      } else {
+        setSelectedId(null);
+        setForm(EMPTY_DRIVER);
+      }
+    } catch (err) {
+      console.error('Failed to delete driver:', err);
+      setErrorMsg(err.message || 'Failed to delete driver.');
     }
-    const remaining = drivers.filter(d => d.id !== selectedId);
-    setDrivers(remaining);
-    if (remaining.length > 0) { setSelectedId(remaining[0].id); setForm({ ...EMPTY_DRIVER, ...remaining[0] }); }
-    else { setSelectedId(null); setForm(EMPTY_DRIVER); }
   };
 
   const set = (key) => (val) => setForm(f => ({ ...f, [key]: val }));
@@ -197,7 +201,7 @@ export default function DriverProfile() {
 
         {/* Editor */}
         <div className="flex-1 overflow-y-auto p-5">
-          <div className="flex items-start justify-between mb-6">
+          <div className="flex items-start justify-between mb-4">
             <div>
               <h2 className="text-2xl font-sans font-black">
                 {form.name ? form.name : <span className="text-muted-foreground/30">New Driver</span>}
@@ -215,13 +219,20 @@ export default function DriverProfile() {
                 </button>
               )}
               <button onClick={handleSave} disabled={saving}
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-primary text-primary-foreground text-xs font-mono font-bold tracking-wider hover:bg-primary/90 transition-all disabled:opacity-60">
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-primary text-primary-foreground text-xs font-mono font-bold tracking-wider hover:bg-primary/90 transition-all disabled:opacity-60 cursor-pointer">
                 {saved ? <><Check className="w-3 h-3" /> SAVED</> : saving
                   ? <div className="w-3 h-3 border border-current/30 border-t-current rounded-full animate-spin" />
                   : <><Save className="w-3 h-3" /> SAVE</>}
               </button>
             </div>
           </div>
+
+          {errorMsg && (
+            <div className="mb-4 flex items-center gap-2 px-3 py-2 rounded border border-red-500/30 bg-red-500/10 text-red-400 text-xs font-mono">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
 
           {/* Tabs */}
           <div className="flex items-center gap-1 border-b border-border mb-6">

@@ -9,14 +9,16 @@ import OverviewTab from '../components/pit/OverviewTab';
 import OracleTab from '../components/pit/OracleTab';
 import RaceOpsTab from '../components/pit/RaceOpsTab';
 import PostAnalysisTab from '../components/pit/PostAnalysisTab';
+import DriverProfilesTab from '../components/pit/DriverProfilesTab';
 import StrategyBoard from '../components/command/StrategyBoard';
 
 const TABS = [
-  { id: 'overview',      label: 'OVERVIEW'       },
-  { id: 'ai-oracle',     label: 'AI ORACLE'      },
-  { id: 'strategy',      label: 'STRATEGY BOARD' },
-  { id: 'race-ops',      label: 'RACE OPS'       },
-  { id: 'post-analysis', label: 'POST-ANALYSIS'  },
+  { id: 'overview',        label: 'OVERVIEW'         },
+  { id: 'ai-oracle',       label: 'AI ORACLE'        },
+  { id: 'strategy',        label: 'STRATEGY BOARD'   },
+  { id: 'race-ops',        label: 'RACE OPS'         },
+  { id: 'driver-profiles', label: 'DRIVER PROFILES'  },
+  { id: 'post-analysis',   label: 'POST-ANALYSIS'    },
 ];
 
 const STRATEGY_MODES = [
@@ -120,8 +122,12 @@ export default function PitCenter() {
             className="flex items-center gap-1 text-[9px] font-mono tracking-widest text-white/40 hover:text-white transition-colors uppercase px-2 py-0.5 rounded hover:bg-white/5 border border-transparent hover:border-white/10">
             <Flag className="w-3 h-3" /> DIRECTOR
           </button>
-          <button onClick={() => navigate('/drivers')}
-            className="flex items-center gap-1 text-[9px] font-mono tracking-widest text-white/25 hover:text-white/50 transition-colors uppercase">
+          <button onClick={() => setActiveTab('driver-profiles')}
+            className={`flex items-center gap-1 text-[9px] font-mono tracking-widest transition-colors uppercase px-2 py-0.5 rounded ${
+              activeTab === 'driver-profiles'
+                ? 'bg-primary/10 text-primary border border-primary/25'
+                : 'text-white/40 hover:text-white hover:bg-white/5'
+            }`}>
             <Users className="w-3 h-3" /> DRIVERS
           </button>
         </div>
@@ -342,11 +348,12 @@ export default function PitCenter() {
 
           {/* Tab content */}
           <div className="flex-1 overflow-y-auto p-3">
-            {activeTab === 'overview'      && <OverviewTab telemetry={telemetry} chartData={chartData} oracleMessages={oracleMessages} />}
-            {activeTab === 'ai-oracle'     && <OracleTab oracleMessages={oracleMessages} telemetry={telemetry} />}
-            {activeTab === 'strategy'      && <StrategyBoard />}
-            {activeTab === 'race-ops'      && <RaceOpsTab flag={flag} onFlagChange={setFlag} commsMessages={commsMessages} onSendCommand={handleSendCommand} />}
-            {activeTab === 'post-analysis' && (
+            {activeTab === 'overview'        && <OverviewTab telemetry={telemetry} chartData={chartData} oracleMessages={oracleMessages} />}
+            {activeTab === 'ai-oracle'       && <OracleTab oracleMessages={oracleMessages} telemetry={telemetry} />}
+            {activeTab === 'strategy'        && <StrategyBoard />}
+            {activeTab === 'race-ops'        && <RaceOpsTab flag={flag} onFlagChange={setFlag} commsMessages={commsMessages} onSendCommand={handleSendCommand} />}
+            {activeTab === 'driver-profiles' && <DriverProfilesTab />}
+            {activeTab === 'post-analysis'   && (
               <PostAnalysisTab
                 telemetry={telemetry}
                 chartData={chartData}
