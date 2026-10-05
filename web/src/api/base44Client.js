@@ -2,7 +2,7 @@
 const mockEntity = {
   list: () => Promise.resolve([]),
   filter: () => Promise.resolve([]),
-  subscribe: () => ({ unsubscribe: () => {} }),
+  subscribe: () => () => {},
   create: () => Promise.resolve({}),
   update: () => Promise.resolve({}),
   delete: () => Promise.resolve({}),
