@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, Users, LogIn, Zap, Gauge, Radio, ChevronRight } from 'lucide-react';
 import { useTelemetry } from '../hooks/useMockTelemetry';
+import { useRealtimeTelemetry, COMMAND_TYPES, COMMAND_STATUS } from '../hooks/useRealtimeTelemetry';
 import SpeedDial from '../components/pit/SpeedDial';
 import OverviewTab from '../components/pit/OverviewTab';
 import OracleTab from '../components/pit/OracleTab';
@@ -333,7 +334,7 @@ export default function PitCenter() {
             {activeTab === 'overview'      && <OverviewTab telemetry={telemetry} chartData={chartData} oracleMessages={oracleMessages} />}
             {activeTab === 'ai-oracle'     && <OracleTab oracleMessages={oracleMessages} telemetry={telemetry} />}
             {activeTab === 'strategy'      && <StrategyBoard />}
-            {activeTab === 'race-ops'      && <RaceOpsTab flag={flag} onFlagChange={setFlag} commsMessages={commsMessages} onSendCommand={sendCommand} />}
+            {activeTab === 'race-ops'      && <RaceOpsTab flag={flag} onFlagChange={setFlag} commsMessages={commsMessages} onSendCommand={handleSendCommand} />}
             {activeTab === 'post-analysis' && <PostAnalysisTab telemetry={telemetry} chartData={chartData} />}
           </div>
         </div>

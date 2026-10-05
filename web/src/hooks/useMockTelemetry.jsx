@@ -138,5 +138,9 @@ export function useTelemetry() {
     chartData,
     sendCommand,
     formatTime,
+    estimatedLapsRemaining: telemetry.battery > 0 ? Math.max(1, Math.round((telemetry.battery / 100) * (telemetry.totalLaps || 30))) : 0,
+    signalLost: false,
+    lastPacketTime: Date.now(),
+    targetPace: '25 MPH',
   };
 }

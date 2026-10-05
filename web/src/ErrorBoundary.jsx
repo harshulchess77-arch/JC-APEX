@@ -12,6 +12,7 @@ class ErrorBoundary extends Component {
 
   componentDidCatch(error, errorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
+    this.setState({ errorInfo });
   }
 
   render() {
@@ -24,10 +25,11 @@ class ErrorBoundary extends Component {
               Something went wrong. Please refresh the page or try again later.
             </p>
             {this.state.error && (
-              <details className="mt-4">
+              <details className="mt-4" open>
                 <summary className="text-slate-400 cursor-pointer mb-2">Error details</summary>
-                <pre className="text-xs text-slate-500 bg-slate-950 p-2 rounded overflow-auto">
-                  {this.state.error.toString()}
+                <pre className="text-xs text-red-400 bg-slate-950 p-2 rounded overflow-auto max-h-60 whitespace-pre-wrap">
+                  {this.state.error?.stack || this.state.error?.toString()}
+                  {this.state.errorInfo?.componentStack && `\n\nComponent Stack:${this.state.errorInfo.componentStack}`}
                 </pre>
               </details>
             )}

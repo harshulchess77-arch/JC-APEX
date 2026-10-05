@@ -8,22 +8,46 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 // Create mock client if credentials are missing
+const mockChannel = {
+  on: function() { return this; },
+  subscribe: function(callback) {
+    if (typeof callback === 'function') callback('SUBSCRIBED');
+    return this;
+  },
+  unsubscribe: () => Promise.resolve({ error: null }),
+  send: () => Promise.resolve(),
+};
+
 const mockSupabase = {
   auth: {
     getSession: () => Promise.resolve({ data: { session: null }, error: null }),
     signInWithPassword: () => Promise.resolve({ data: null, error: new Error('Demo mode') }),
     signOut: () => Promise.resolve({ error: null }),
+    onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
   },
-  from: () => ({
-    select: () => Promise.resolve({ data: [], error: null }),
-    insert: () => Promise.resolve({ data: null, error: null }),
-    update: () => Promise.resolve({ data: null, error: null }),
-    delete: () => Promise.resolve({ data: null, error: null }),
-  }),
-  channel: () => ({
-    on: () => ({ subscribe: () => {}, send: () => {} }),
-    subscribe: () => {},
-  }),
+  from: () => {
+    const queryBuilder = {
+      select: function() { return this; },
+      insert: function() { return this; },
+      update: function() { return this; },
+      delete: function() { return this; },
+      eq: function() { return this; },
+      order: function() { return this; },
+      limit: function() { return this; },
+      single: function() { return this; },
+      then: function(resolve) {
+        return Promise.resolve({ data: [], error: null }).then(resolve);
+      },
+      catch: function(reject) {
+        return Promise.resolve({ data: [], error: null }).catch(reject);
+      }
+    };
+    return queryBuilder;
+  },
+  channel: () => mockChannel,
+  removeChannel: () => Promise.resolve('ok'),
+  removeAllChannels: () => Promise.resolve([]),
+  getChannels: () => [],
 };
 
 export const supabase = (supabaseUrl && supabaseAnonKey)
