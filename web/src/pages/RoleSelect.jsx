@@ -185,7 +185,22 @@ export default function RoleSelect() {
           )}
         </button>
 
-        <p className="text-center text-[10px] font-mono text-muted-foreground/20 tracking-widest mt-8">
+        {/* Demo / Field Presentation Mode Bypass */}
+        <div className="mt-3 flex items-center justify-center">
+          <button
+            type="button"
+            onClick={() => {
+              login(selected, VALID_PASSCODE);
+              const role = ROLES.find(r => r.id === selected);
+              navigate(role.route);
+            }}
+            className="text-[10px] font-mono tracking-widest text-muted-foreground/40 hover:text-primary transition-colors uppercase py-1 px-3 rounded border border-white/5 hover:border-primary/30 hover:bg-primary/5"
+          >
+            ⚡ Bypass / Demo Mode (Field Presentation)
+          </button>
+        </div>
+
+        <p className="text-center text-[10px] font-mono text-muted-foreground/20 tracking-widest mt-6">
           ELECTRATHON RACE INTELLIGENCE · SECURE CHANNEL
         </p>
       </motion.div>

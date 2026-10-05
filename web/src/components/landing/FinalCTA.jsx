@@ -50,7 +50,7 @@ export default function FinalCTA() {
           {/* CTA buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
             <Link
-              to="/"
+              to="/login"
               className="group inline-flex items-center gap-3 px-10 py-4 bg-primary text-primary-foreground font-mono text-sm font-bold tracking-wider uppercase rounded glow-red hover:bg-primary/90 transition-all"
             >
               <Cpu className="w-4 h-4" />

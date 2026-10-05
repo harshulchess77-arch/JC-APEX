@@ -6,6 +6,7 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import PasscodeProtectedRoute from '@/components/PasscodeProtectedRoute';
 import { PasscodeAuthProvider } from '@/lib/PasscodeAuthContext';
+import Landing from './pages/landings';
 import RoleSelect from './pages/RoleSelect';
 import CommandCenter from './pages/CommandCenter';
 import PitCenter from './pages/PitCenter';
@@ -39,10 +40,10 @@ const AuthenticatedApp = () => {
     <PasscodeAuthProvider>
     <Routes>
       {/* ── PUBLIC ROUTES (no auth required) ── */}
+      {/* Root renders the high-level public Landing / Home page */}
+      <Route path="/" element={<Landing />} />
       <Route path="/login" element={<RoleSelect />} />
-      {/* Root always redirects to login */}
-      <Route path="/" element={<Navigate to="/login" replace />} />
-      <Route path="/command-center" element={<Navigate to="/login" replace />} />
+      <Route path="/command-center" element={<Navigate to="/pit" replace />} />
 
       {/* ── PROTECTED ROUTES (require passcode auth) ── */}
       <Route element={<PasscodeProtectedRoute />}>

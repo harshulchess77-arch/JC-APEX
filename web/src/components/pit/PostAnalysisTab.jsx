@@ -1,7 +1,29 @@
-import React from 'react';
-import { Download, BarChart3, FileText } from 'lucide-react';
+import React, { useState } from 'react';
+import { Download, BarChart3, FileText, CheckCircle2 } from 'lucide-react';
+import { exportTelemetryPDF } from '@/utils/pdfExport';
 
-export default function PostAnalysisTab({ telemetry, chartData }) {
+export default function PostAnalysisTab({ telemetry, chartData, sessionId, telemetryHistory }) {
+  const [exporting, setExporting] = useState(false);
+  const [exportedMsg, setExportedMsg] = useState(null);
+
+  const handleExportPDF = async () => {
+    try {
+      setExporting(true);
+      const filename = await exportTelemetryPDF({
+        sessionId: sessionId || 'JC-APEX-01',
+        telemetry,
+        chartData,
+        telemetryHistory: telemetryHistory || []
+      });
+      setExportedMsg(filename);
+      setTimeout(() => setExportedMsg(null), 5000);
+    } catch (err) {
+      console.error('Failed to export PDF:', err);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const laps = Math.floor(telemetry.lap);
   const peakSpeed = chartData.length ? Math.max(...chartData.map(d => d.speed || 0)).toFixed(1) : '—';
   const avgEff = chartData.length
@@ -53,7 +75,7 @@ export default function PostAnalysisTab({ telemetry, chartData }) {
                 const w = 60 + (i % 3) * 10;
                 return (
                   <div key={i} className="flex items-center gap-3">
-                    <span className="text-[8px] font-mono text-white/25 w-6">L{i + 1}</span>
+                    <span className="text-[8px] font-mono text-white/25 w-6">L1</span>
                     <div className="flex-1 h-1.5 bg-white/[0.04] rounded-full overflow-hidden">
                       <div className="h-full bg-primary rounded-full" style={{ width: `${w}%` }} />
                     </div>
@@ -97,12 +119,22 @@ export default function PostAnalysisTab({ telemetry, chartData }) {
               <Download className="w-3.5 h-3.5 text-white/30" />
               <span className="text-[9px] font-display font-bold tracking-widest text-white/40 uppercase">Export Report</span>
             </div>
-            <span className="text-[7px] font-mono text-white/15">RAW · CSV · JSON</span>
+            <span className="text-[7px] font-mono text-white/15">PDF · KPI · LOGS</span>
           </div>
-          <button className="w-full flex items-center justify-center gap-2 py-3 rounded border border-primary/35 bg-primary/8 text-primary font-display font-black text-xs tracking-widest hover:bg-primary/15 transition-colors">
+          <button
+            onClick={handleExportPDF}
+            disabled={exporting}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded border border-primary/35 bg-primary/8 text-primary font-display font-black text-xs tracking-widest hover:bg-primary/15 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          >
             <FileText className="w-3.5 h-3.5" />
-            EXPORT LUXURY PDF REPORT
+            {exporting ? 'GENERATING REPORT...' : 'EXPORT LUXURY PDF REPORT'}
           </button>
+          {exportedMsg && (
+            <div className="mt-2 flex items-center justify-center gap-1.5 text-[8px] font-mono text-green-400">
+              <CheckCircle2 className="w-3 h-3" />
+              <span>Downloaded {exportedMsg}</span>
+            </div>
+          )}
         </div>
       </div>
     </div>

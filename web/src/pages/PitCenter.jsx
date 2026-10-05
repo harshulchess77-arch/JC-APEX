@@ -65,7 +65,8 @@ export default function PitCenter() {
   const {
     telemetry, strategy, setStrategy,
     flag, setFlag, oracleMessages, commsMessages,
-    chartData, sendCommand: legacySendCommand, formatTime, estimatedLapsRemaining, signalLost, lastPacketTime
+    chartData, sendCommand: legacySendCommand, formatTime, estimatedLapsRemaining, signalLost, lastPacketTime,
+    sessionId, telemetryHistory
   } = useTelemetry();
   const {
     connectionMode: realtimeConnectionMode,
@@ -145,7 +146,7 @@ export default function PitCenter() {
                 ? 'bg-[#1a0000] border border-primary/50 text-primary'
                 : 'bg-green-600 border border-green-400/50 text-white hover:bg-green-500'
             }`}>
-            {sessionActive ? '■ TERMINATE' : '▶ INITIATE SESSION'}
+              {sessionActive ? '■ TERMINATE' : '▶ INITIATE SESSION'}
           </button>
           <button onClick={() => { logout(); navigate('/login'); }} className="text-white/15 hover:text-white/40 transition-colors">
             <LogOut className="w-3.5 h-3.5" />
@@ -345,7 +346,14 @@ export default function PitCenter() {
             {activeTab === 'ai-oracle'     && <OracleTab oracleMessages={oracleMessages} telemetry={telemetry} />}
             {activeTab === 'strategy'      && <StrategyBoard />}
             {activeTab === 'race-ops'      && <RaceOpsTab flag={flag} onFlagChange={setFlag} commsMessages={commsMessages} onSendCommand={handleSendCommand} />}
-            {activeTab === 'post-analysis' && <PostAnalysisTab telemetry={telemetry} chartData={chartData} />}
+            {activeTab === 'post-analysis' && (
+              <PostAnalysisTab
+                telemetry={telemetry}
+                chartData={chartData}
+                sessionId={sessionId}
+                telemetryHistory={telemetryHistory}
+              />
+            )}
           </div>
         </div>
       </div>

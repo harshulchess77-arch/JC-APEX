@@ -105,20 +105,26 @@ export default function HeroSection() {
         </div>
 
         {/* CTAs */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-14">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
           <Link
-            to="/"
+            to="/login"
             className="group relative inline-flex items-center gap-3 px-8 py-4 bg-primary text-primary-foreground font-mono text-sm font-bold tracking-wider uppercase rounded glow-red hover:bg-primary/90 transition-all"
           >
             <Cpu className="w-4 h-4" />
-            LAUNCH SYSTEM
+            OPERATOR LOGIN
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </Link>
           <Link
-            to="/"
-            className="inline-flex items-center gap-2 px-8 py-4 border border-border text-muted-foreground font-mono text-sm font-semibold tracking-wider uppercase rounded hover:bg-secondary hover:text-foreground transition-all"
+            to="/pit"
+            className="inline-flex items-center gap-2 px-8 py-4 border border-border text-foreground font-mono text-sm font-semibold tracking-wider uppercase rounded hover:bg-secondary hover:text-foreground transition-all"
           >
-            OPERATOR SIGN IN
+            PIT CREW DASHBOARD
+          </Link>
+          <Link
+            to="/driver"
+            className="inline-flex items-center gap-2 px-8 py-4 border border-green-500/30 text-green-400 font-mono text-sm font-semibold tracking-wider uppercase rounded hover:bg-green-500/10 transition-all"
+          >
+            DRIVER HUD
           </Link>
         </div>
 
