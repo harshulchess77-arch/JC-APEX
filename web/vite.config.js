@@ -4,6 +4,7 @@ import path from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/', // Explicitly set to root path for SPA routing
   logLevel: 'error', // Suppress warnings, only show errors
   publicDir: 'public',
   resolve: {
