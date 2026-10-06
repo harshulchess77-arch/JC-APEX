@@ -105,6 +105,13 @@ export function useRealtimeTelemetry(role = 'driver') {
             }
           }
         })
+        .on('broadcast', { event: 'flag_change' }, (payload) => {
+          if (role === 'driver') {
+            if (payload?.payload?.flag) {
+              setDriverTelemetry(prev => ({ ...prev, flag: payload.payload.flag }));
+            }
+          }
+        })
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') {
             console.log('Supabase Realtime connected');
@@ -134,32 +141,49 @@ export function useRealtimeTelemetry(role = 'driver') {
   }, []);
 
   const handleDriverAck = useCallback((ackData) => {
-    setCommandHistory(prev =>
-      prev.map(cmd =>
-        cmd.id === ackData.commandId
-          ? { ...cmd, status: COMMAND_STATUS.ACKNOWLEDGED, ackedAt: ackData.timestamp }
-          : cmd
-      )
-    );
+    if (!ackData || !ackData.commandId) {
+      console.error('[handleDriverAck] Invalid ackData:', ackData);
+      return;
+    }
+
+    try {
+      setCommandHistory(prev =>
+        prev.map(cmd =>
+          cmd.id === ackData.commandId
+            ? { ...cmd, status: COMMAND_STATUS.ACKNOWLEDGED, ackedAt: ackData.timestamp }
+            : cmd
+        )
+      );
+    } catch (error) {
+      console.error('[handleDriverAck] Error updating command history:', error);
+    }
   }, []);
 
   // Send command (for pit/director)
   const sendCommand = useCallback((type, payload) => {
     const sender = role === 'pit' ? 'PIT' : 'DIRECTOR';
     const command = createDownlinkMessage(sender, type, payload, true);
-    
+
     setCommandHistory(prev => [...prev, { ...command, status: COMMAND_STATUS.SENT }]);
 
     if (connectionMode === 'websocket' && socketRef.current) {
-      const event = role === 'pit' ? 'pit_command' : 'director_command';
-      socketRef.current.emit(event, command);
+      try {
+        const event = role === 'pit' ? 'pit_command' : 'director_command';
+        socketRef.current.emit(event, command);
+      } catch (error) {
+        console.error('[sendCommand] WebSocket emit error:', error);
+      }
     } else if (connectionMode === 'supabase' && channelRef.current) {
-      const event = role === 'pit' ? 'pit_command' : 'director_command';
-      channelRef.current.send({
-        type: 'broadcast',
-        event,
-        payload: command,
-      });
+      try {
+        const event = role === 'pit' ? 'pit_command' : 'director_command';
+        channelRef.current.send({
+          type: 'broadcast',
+          event,
+          payload: command,
+        });
+      } catch (error) {
+        console.error('[sendCommand] Supabase send error:', error);
+      }
     } else {
       console.log('Mock mode - command logged locally:', command);
     }
@@ -169,6 +193,11 @@ export function useRealtimeTelemetry(role = 'driver') {
 
   // Send acknowledgment (for driver)
   const sendAck = useCallback((commandId) => {
+    if (!commandId) {
+      console.error('[sendAck] Invalid commandId:', commandId);
+      return;
+    }
+
     const ack = {
       commandId,
       status: COMMAND_STATUS.ACKNOWLEDGED,
@@ -179,13 +208,21 @@ export function useRealtimeTelemetry(role = 'driver') {
     setIncomingCommands(prev => prev.filter(cmd => cmd.id !== commandId));
 
     if (connectionMode === 'websocket' && socketRef.current) {
-      socketRef.current.emit('driver_ack', ack);
+      try {
+        socketRef.current.emit('driver_ack', ack);
+      } catch (error) {
+        console.error('[sendAck] WebSocket emit error:', error);
+      }
     } else if (connectionMode === 'supabase' && channelRef.current) {
-      channelRef.current.send({
-        type: 'broadcast',
-        event: 'driver_ack',
-        payload: ack,
-      });
+      try {
+        channelRef.current.send({
+          type: 'broadcast',
+          event: 'driver_ack',
+          payload: ack,
+        });
+      } catch (error) {
+        console.error('[sendAck] Supabase send error:', error);
+      }
     } else {
       console.log('Mock mode - acknowledgment logged locally:', ack);
     }
@@ -203,6 +240,23 @@ export function useRealtimeTelemetry(role = 'driver') {
         event: 'driver_status',
         payload: status,
       });
+    }
+  }, [connectionMode]);
+
+  // Broadcast flag change (for pit/director)
+  const broadcastFlagChange = useCallback((flag) => {
+    if (connectionMode === 'supabase' && channelRef.current) {
+      try {
+        channelRef.current.send({
+          type: 'broadcast',
+          event: 'flag_change',
+          payload: { flag },
+        });
+      } catch (error) {
+        console.error('[broadcastFlagChange] Supabase send error:', error);
+      }
+    } else {
+      console.log('Mock mode - flag change logged locally:', flag);
     }
   }, [connectionMode]);
 
@@ -227,5 +281,6 @@ export function useRealtimeTelemetry(role = 'driver') {
     sendCommand,
     sendAck,
     broadcastDriverStatus,
+    broadcastFlagChange,
   };
 }

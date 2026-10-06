@@ -64,9 +64,11 @@ function BigArc({ value, max, color }) {
 export default function DriverHUD() {
   const navigate = useNavigate();
   const { logout } = usePasscodeAuth();
-  const { telemetry, flag, oracleMessages, commsMessages, formatTime, targetPace, signalLost, lastPacketTime } = useTelemetry();
-  const { incomingCommands, sendAck, broadcastDriverStatus } = useRealtimeTelemetry('driver');
+  const { telemetry, flag: localFlag, oracleMessages, commsMessages, formatTime, targetPace, signalLost, lastPacketTime } = useTelemetry();
+  const { incomingCommands, sendAck, broadcastDriverStatus, driverTelemetry } = useRealtimeTelemetry('driver');
   const [focusMode, setFocusMode] = useState(false);
+  // Use flag from realtime broadcast if available, otherwise fall back to local state
+  const flag = driverTelemetry?.flag || localFlag;
   const flagCfg = FLAG_CFG[flag] || FLAG_CFG.green;
   const latestOracle = oracleMessages[0];
   const pitMessages = commsMessages.filter(m => m.from === 'pit');
@@ -121,7 +123,7 @@ export default function DriverHUD() {
                     {incomingCommands[0].sender} COMMAND
                   </div>
                   <div className={`text-xl font-display font-black ${getCommandColor(incomingCommands[0]).text}`}>
-                    {incomingCommands[0].payload}
+                    {incomingCommands[0].payload || incomingCommands[0].type || 'INCOMING COMMAND'}
                   </div>
                 </div>
               </div>
@@ -132,6 +134,34 @@ export default function DriverHUD() {
                 <CheckCircle2 className="w-5 h-5" />
                 ACKNOWLEDGE
               </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Flag Banner Overlay */}
+      <AnimatePresence>
+        {flag !== 'green' && (
+          <motion.div
+            initial={{ opacity: 0, y: -100 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -100 }}
+            className={`fixed top-12 left-0 right-0 z-30 border-b-2 ${
+              flag === 'yellow' ? 'bg-yellow-500/90 border-yellow-600' :
+              flag === 'red' ? 'bg-red-600/90 border-red-700' :
+              flag === 'black' ? 'bg-zinc-900/95 border-zinc-700' :
+              'bg-green-600/90 border-green-700'
+            }`}
+          >
+            <div className="max-w-4xl mx-auto flex items-center justify-center py-3">
+              <div className={`text-2xl font-display font-black tracking-widest ${
+                flag === 'yellow' ? 'text-black' :
+                flag === 'red' ? 'text-white' :
+                flag === 'black' ? 'text-white' :
+                'text-white'
+              }`}>
+                {flag.toUpperCase()} FLAG
+              </div>
             </div>
           </motion.div>
         )}

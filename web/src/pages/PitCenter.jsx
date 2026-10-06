@@ -75,6 +75,7 @@ export default function PitCenter() {
     connectionMode: realtimeConnectionMode,
     commandHistory,
     sendCommand: realtimeSendCommand,
+    broadcastFlagChange,
   } = useRealtimeTelemetry('pit');
   const [activeTab, setActiveTab] = useState('overview');
   const [sessionActive, setSessionActive] = useState(false);
@@ -113,6 +114,11 @@ export default function PitCenter() {
     realtimeSendCommand(commandType, commandText);
     // Also use legacy for UI feedback
     legacySendCommand(commandText);
+  };
+
+  const handleFlagChange = (newFlag) => {
+    setFlag(newFlag);
+    broadcastFlagChange(newFlag);
   };
 
   return (
@@ -378,7 +384,7 @@ export default function PitCenter() {
             {activeTab === 'overview'        && <OverviewTab telemetry={telemetry} chartData={chartData} oracleMessages={oracleMessages} />}
             {activeTab === 'ai-oracle'       && <OracleTab oracleMessages={oracleMessages} telemetry={telemetry} />}
             {activeTab === 'strategy'        && <StrategyBoard />}
-            {activeTab === 'race-ops'        && <RaceOpsTab flag={flag} onFlagChange={setFlag} commsMessages={commsMessages} onSendCommand={handleSendCommand} />}
+            {activeTab === 'race-ops'        && <RaceOpsTab flag={flag} onFlagChange={handleFlagChange} commsMessages={commsMessages} onSendCommand={handleSendCommand} />}
             {activeTab === 'driver-profiles' && <DriverProfilesTab />}
             {activeTab === 'post-analysis'   && (
               <PostAnalysisTab
