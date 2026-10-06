@@ -1,5 +1,12 @@
 {
+  "outputDirectory": "web/dist",
+  "cleanUrls": true,
+  "trailingSlash": false,
   "rewrites": [
+    {
+      "source": "/favicon.ico",
+      "destination": "/favicon.ico"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
