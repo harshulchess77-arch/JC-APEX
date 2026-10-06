@@ -55,59 +55,10 @@ export function useRealtimeTelemetry(role = 'driver') {
   const channelRef = useRef(null);
   const commandTimeoutRef = useRef(null);
 
-  // Initialize connection
+  // Initialize connection - Use Supabase directly (skip WebSocket for demo)
   useEffect(() => {
-    const socketUrl = import.meta.env.VITE_SOCKET_SERVER_URL || 'http://localhost:4000';
-    
-    // Try WebSocket first for local track mode
-    try {
-      socketRef.current = io(socketUrl, {
-        transports: ['websocket', 'polling'],
-        reconnectionAttempts: 3,
-        timeout: 5000,
-      });
-
-      socketRef.current.on('connect', () => {
-        console.log('WebSocket connected for real-time communication');
-        setConnectionMode('websocket');
-      });
-
-      socketRef.current.on('disconnect', () => {
-        console.log('WebSocket disconnected, trying Supabase');
-        trySupabaseConnection();
-      });
-
-      socketRef.current.on('connect_error', () => {
-        console.log('WebSocket connection failed, trying Supabase');
-        trySupabaseConnection();
-      });
-
-      // Listen for incoming commands (driver only)
-      if (role === 'driver') {
-        socketRef.current.on('pit_command', (data) => {
-          handleIncomingCommand(data);
-        });
-        socketRef.current.on('director_command', (data) => {
-          handleIncomingCommand(data);
-        });
-      }
-
-      // Listen for driver acknowledgments (pit/director only)
-      if (role === 'pit' || role === 'director') {
-        socketRef.current.on('driver_ack', (data) => {
-          handleDriverAck(data);
-        });
-        socketRef.current.on('driver_status', (data) => {
-          // Handle driver telemetry updates
-          if (data && data.telemetry) {
-            setDriverTelemetry(data.telemetry);
-          }
-        });
-      }
-    } catch (error) {
-      console.error('WebSocket initialization failed:', error);
-      trySupabaseConnection();
-    }
+    // Skip WebSocket and go directly to Supabase for production/demo
+    trySupabaseConnection();
 
     return () => {
       if (socketRef.current) {

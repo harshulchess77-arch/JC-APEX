@@ -44,10 +44,15 @@ export function useTelemetry(sessionId = null, enabled = true, options = {}) {
   try {
     const auth = usePasscodeAuth();
     authIsDemoMode = Boolean(auth?.isDemoMode);
-  } catch {
-    authIsDemoMode = false;
+  } catch (err) {
+    // Silently default to false if not in auth context
+    console.debug('[useTelemetry] Not in PasscodeAuthContext, defaulting to isDemoMode=false');
   }
-  const isDemoMode = options.isDemoMode !== undefined ? Boolean(options.isDemoMode) : authIsDemoMode;
+  
+  // Allow explicit override via options, otherwise use auth context
+  const isDemoMode = options.isDemoMode !== undefined 
+    ? Boolean(options.isDemoMode) 
+    : authIsDemoMode;
 
   const [hardwareData, setHardwareData] = useState(null);
   const [telemetry, setTelemetry] = useState(ZERO_TELEMETRY);
@@ -271,6 +276,7 @@ export function useTelemetry(sessionId = null, enabled = true, options = {}) {
           filter: sessionId ? `session_id=eq.${sessionId}` : undefined,
         },
         (payload) => {
+          console.log('[useTelemetry] Received payload:', payload);
           const data = payload.new;
 
           // Parse live hardware fields with defensive numeric fallbacks
@@ -357,9 +363,12 @@ export function useTelemetry(sessionId = null, enabled = true, options = {}) {
         }
       )
       .subscribe((status) => {
+        console.log('[useTelemetry] Supabase Realtime subscription status:', status);
         if (status === 'SUBSCRIBED') {
+          console.log('[useTelemetry] Successfully subscribed to telemetry_logs table');
           setIsConnected(true);
         } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          console.error('[useTelemetry] Subscription closed or error:', status);
           setIsConnected(false);
         }
       });

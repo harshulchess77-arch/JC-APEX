@@ -45,7 +45,13 @@ function LiveMetricPanel({ label, value, unit, color, max, data, dataKey }) {
 
 export default function TelemetryDashboard() {
   const navigate = useNavigate();
-  const { telemetry, chartData, formatTime, power, estimatedLapsRemaining, thermalAlert, voltageAlert } = useTelemetry();
+  // EXPLICITLY set isDemoMode to false for live hardware mode
+  // Change to true for demo mode
+  const { telemetry, chartData, formatTime, power, estimatedLapsRemaining, thermalAlert, voltageAlert } = useTelemetry(
+    null,  // sessionId (null = listen to all sessions)
+    true,  // enabled
+    { isDemoMode: false }  // EXPLICIT: Set to false for live hardware, true for demo
+  );
 
   const throttleData = chartData.map(d => ({ ...d, throttle: d.efficiency }));
 
