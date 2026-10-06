@@ -45,12 +45,11 @@ function LiveMetricPanel({ label, value, unit, color, max, data, dataKey }) {
 
 export default function TelemetryDashboard() {
   const navigate = useNavigate();
-  // EXPLICITLY set isDemoMode to false for live hardware mode
-  // Change to true for demo mode
+  // LIVE HARDWARE MODE - will show actual data from your Heltec V3 hardware
   const { telemetry, chartData, formatTime, power, estimatedLapsRemaining, thermalAlert, voltageAlert } = useTelemetry(
     null,  // sessionId (null = listen to all sessions)
     true,  // enabled
-    { isDemoMode: false }  // EXPLICIT: Set to false for live hardware, true for demo
+    { isDemoMode: false }  // FALSE = Live Hardware Mode (actual data from LoRa)
   );
 
   const throttleData = chartData.map(d => ({ ...d, throttle: d.efficiency }));
