@@ -6,31 +6,31 @@
 
 @layer base {
   :root {
-    /* F1 Dark Aesthetic Theme */
-    --background: 215 20% 6%; /* #0B0E14 - Carbon Dark */
-    --foreground: 0 0% 95%;
-    --card: 215 20% 8%;
-    --card-foreground: 0 0% 95%;
-    --popover: 215 20% 8%;
-    --popover-foreground: 0 0% 95%;
-    --primary: 142 100% 50%; /* #00FF66 - Neon Green */
+    /* JC-APEX Crimson Red F1 Theme */
+    --background: 220 20% 4%; /* #08090C - Pitch Black Carbon */
+    --foreground: 0 0% 100%; /* #FFFFFF - Pure White */
+    --card: 220 15% 7%; /* #101217 - Dark Slate Card */
+    --card-foreground: 0 0% 100%;
+    --popover: 220 15% 7%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 348 91% 56%; /* #FF1E42 - Crimson Red F1 */
     --primary-foreground: 0 0% 100%;
-    --secondary: 215 20% 12%;
+    --secondary: 220 20% 12%;
     --secondary-foreground: 0 0% 80%;
-    --muted: 215 20% 12%;
-    --muted-foreground: 0 0% 50%;
-    --accent: 142 100% 50%;
+    --muted: 220 20% 12%;
+    --muted-foreground: 217 10% 55%; /* #8A909D - Muted Slate */
+    --accent: 348 91% 56%; /* #FF1E42 - Crimson Red */
     --accent-foreground: 0 0% 100%;
-    --destructive: 348 100% 50%; /* #FF0033 - Vivid Red */
+    --destructive: 348 91% 56%; /* #FF1E42 - Crimson Red */
     --destructive-foreground: 0 0% 98%;
-    --border: 215 20% 15%;
-    --input: 215 20% 15%;
-    --ring: 142 100% 50%;
-    --chart-1: 142 100% 50%;
+    --border: 220 15% 16%; /* #1C1F28 - Subtle Border */
+    --input: 220 15% 16%;
+    --ring: 348 91% 56%; /* #FF1E42 - Crimson Red */
+    --chart-1: 348 91% 56%;
     --chart-2: 0 0% 40%;
     --chart-3: 0 0% 60%;
     --chart-4: 0 0% 25%;
-    --chart-5: 142 100% 45%;
+    --chart-5: 348 91% 45%;
     --radius: 0.5rem;
     --font-mono: 'JetBrains Mono', monospace;
     --font-sans: 'Inter', sans-serif;
@@ -39,30 +39,30 @@
   }
 
   .dark {
-    --background: 215 20% 6%; /* #0B0E14 - Carbon Dark */
-    --foreground: 0 0% 95%;
-    --card: 215 20% 8%;
-    --card-foreground: 0 0% 95%;
-    --popover: 215 20% 8%;
-    --popover-foreground: 0 0% 95%;
-    --primary: 142 100% 50%; /* #00FF66 - Neon Green */
+    --background: 220 20% 4%; /* #08090C - Pitch Black Carbon */
+    --foreground: 0 0% 100%;
+    --card: 220 15% 7%; /* #101217 - Dark Slate Card */
+    --card-foreground: 0 0% 100%;
+    --popover: 220 15% 7%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 348 91% 56%; /* #FF1E42 - Crimson Red F1 */
     --primary-foreground: 0 0% 100%;
-    --secondary: 215 20% 12%;
+    --secondary: 220 20% 12%;
     --secondary-foreground: 0 0% 80%;
-    --muted: 215 20% 12%;
-    --muted-foreground: 0 0% 50%;
-    --accent: 142 100% 50%;
+    --muted: 220 20% 12%;
+    --muted-foreground: 217 10% 55%; /* #8A909D - Muted Slate */
+    --accent: 348 91% 56%; /* #FF1E42 - Crimson Red */
     --accent-foreground: 0 0% 100%;
-    --destructive: 348 100% 50%; /* #FF0033 - Vivid Red */
+    --destructive: 348 91% 56%; /* #FF1E42 - Crimson Red */
     --destructive-foreground: 0 0% 98%;
-    --border: 215 20% 15%;
-    --input: 215 20% 15%;
-    --ring: 142 100% 50%;
-    --chart-1: 142 100% 50%;
+    --border: 220 15% 16%; /* #1C1F28 - Subtle Border */
+    --input: 220 15% 16%;
+    --ring: 348 91% 56%; /* #FF1E42 - Crimson Red */
+    --chart-1: 348 91% 56%;
     --chart-2: 0 0% 40%;
     --chart-3: 0 0% 60%;
     --chart-4: 0 0% 25%;
-    --chart-5: 142 100% 45%;
+    --chart-5: 348 91% 45%;
   }
 }
 
@@ -73,17 +73,22 @@
 
   body {
     @apply bg-background text-foreground;
+    background: radial-gradient(ellipse at top, #101217 0%, #08090C 100%);
   }
 }
 
-/* F1 Race Control Theme Colors */
+/* JC-APEX Crimson Red F1 Theme Colors */
 :root {
-  --f1-carbon-dark: #0B0E14;
-  --f1-neon-green: #00FF66;
-  --f1-vivid-red: #FF0033;
-  --f1-signal-green: #00D93D;
-  --f1-signal-yellow: #FFD600;
-  --f1-signal-orange: #FF6B00;
+  --f1-carbon-dark: #08090C; /* Pitch Black Carbon */
+  --f1-crimson-red: #FF1E42; /* Apex Red - Primary Brand */
+  --f1-nominal-green: #10B981; /* Emerald Green - Status Only */
+  --f1-signal-green: #00E676; /* Bright Green - Online Status */
+  --f1-warning-gold: #FFB300; /* Racing Gold - Caution */
+  --f1-critical-red: #FF1E42; /* Crimson Red - Danger */
+  --f1-data-cyan: #00E5FF; /* Electric Cyan - Data Readouts */
+  --f1-muted-slate: #8A909D; /* Muted Slate - Subtitles */
+  --f1-surface-panel: #101217; /* Dark Slate Card */
+  --f1-border-subtle: #1C1F28; /* Subtle Border */
 }
 
 /* Custom scrollbar */
@@ -98,7 +103,7 @@
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(0, 84%, 60%);
+  background: hsl(348, 91%, 56%);
 }
 
 /* Grid background pattern */
@@ -109,17 +114,17 @@
   background-size: 60px 60px;
 }
 
-/* Red glow effect */
+/* Crimson Red glow effect */
 .glow-red {
-  box-shadow: 0 0 20px rgba(239, 68, 68, 0.3), 0 0 60px rgba(239, 68, 68, 0.1);
+  box-shadow: 0 0 20px rgba(255, 30, 66, 0.3), 0 0 60px rgba(255, 30, 66, 0.1);
 }
 
 .glow-red-text {
-  text-shadow: 0 0 20px rgba(239, 68, 68, 0.5), 0 0 40px rgba(239, 68, 68, 0.2);
+  text-shadow: 0 0 20px rgba(255, 30, 66, 0.5), 0 0 40px rgba(255, 30, 66, 0.2);
 }
 
 .glow-red-subtle {
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.15), 0 0 30px rgba(239, 68, 68, 0.05);
+  box-shadow: 0 0 10px rgba(255, 30, 66, 0.15), 0 0 30px rgba(255, 30, 66, 0.05);
 }
 
 /* Pulse animation for live indicators */

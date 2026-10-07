@@ -65,6 +65,17 @@ module.exports = {
   				'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
   				border: 'hsl(var(--sidebar-border))',
   				ring: 'hsl(var(--sidebar-ring))'
+  			},
+  			// JC-APEX F1 Theme Colors
+  			f1: {
+  				crimson: '#FF1E42',
+  				carbon: '#08090C',
+  				surface: '#101217',
+  				slate: '#8A909D',
+  				nominal: '#10B981',
+  				cyan: '#00E5FF',
+  				gold: '#FFB300',
+  				border: '#1C1F28'
   			}
   		},
   		keyframes: {

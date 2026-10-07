@@ -9,10 +9,10 @@ export default function LiveChart({ data, dataKey, color, label }) {
   const safeLabel = label ?? 'Metric';
 
   const colorMap = {
-    red: '#FF0033',
-    green: '#00FF66',
-    yellow: '#FFD600',
-    blue: '#60a5fa',
+    red: '#FF1E42',
+    green: '#10B981',
+    yellow: '#FFB300',
+    blue: '#00E5FF',
     white: '#f5f5f5',
   };
 

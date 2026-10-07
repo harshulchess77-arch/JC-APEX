@@ -371,7 +371,7 @@ export default function PitCenter() {
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                 className={`px-4 py-2.5 text-[9px] font-display font-bold tracking-[0.2em] uppercase transition-all flex-shrink-0 border-b-2 -mb-px ${
                   activeTab === tab.id
-                    ? 'border-primary text-primary'
+                    ? 'border-[#FF1E42] text-[#FF1E42] bg-[rgba(255,30,66,0.15)]'
                     : 'border-transparent text-white/20 hover:text-white/40'
                 }`}>
                 {tab.label}

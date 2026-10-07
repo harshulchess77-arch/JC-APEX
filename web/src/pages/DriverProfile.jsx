@@ -27,7 +27,7 @@ function StatInput({ label, value, onChange, type = 'text', placeholder = '' }) 
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full px-3 py-2.5 rounded border border-border bg-card/40 text-foreground font-mono text-sm focus:outline-none focus:border-primary/40 focus:bg-card/70 transition-all placeholder:text-muted-foreground/20"
+        className="w-full px-3 py-2.5 rounded border border-[#262B3B] bg-[#141720] text-white font-mono text-sm focus:outline-none focus:border-[#FF1E42] focus:bg-[#1a1d26] transition-all placeholder:text-white/20"
       />
     </div>
   );
@@ -40,7 +40,7 @@ function SelectInput({ label, value, onChange, options }) {
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="w-full px-3 py-2.5 rounded border border-border bg-card/40 text-foreground font-mono text-sm focus:outline-none focus:border-primary/40 transition-all"
+        className="w-full px-3 py-2.5 rounded border border-[#262B3B] bg-[#141720] text-white font-mono text-sm focus:outline-none focus:border-[#FF1E42] transition-all"
       >
         {options.map(o => <option key={o} value={o}>{o}</option>)}
       </select>
@@ -227,7 +227,7 @@ export default function DriverProfile() {
                 </button>
               )}
               <button onClick={handleSave} disabled={saving}
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-primary text-primary-foreground text-xs font-mono font-bold tracking-wider hover:bg-primary/90 transition-all disabled:opacity-60 cursor-pointer">
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded bg-[#FF1E42] text-white text-xs font-mono font-bold tracking-wider hover:bg-[#E01335] transition-all disabled:opacity-60 cursor-pointer">
                 {saved ? <><Check className="w-3 h-3" /> SAVED</> : saving
                   ? <div className="w-3 h-3 border border-current/30 border-t-current rounded-full animate-spin" />
                   : <><Save className="w-3 h-3" /> SAVE</>}
@@ -249,7 +249,7 @@ export default function DriverProfile() {
               return (
                 <button key={t.id} onClick={() => setActiveTab(t.id)}
                   className={`flex items-center gap-1.5 px-3 py-2 text-[11px] font-mono tracking-wider transition-all border-b-2 -mb-px ${
-                    activeTab === t.id ? 'border-primary text-primary' : 'border-transparent text-muted-foreground/40 hover:text-muted-foreground'
+                    activeTab === t.id ? 'border-[#FF1E42] text-[#FF1E42] bg-[rgba(255,30,66,0.15)]' : 'border-transparent text-muted-foreground/40 hover:text-muted-foreground'
                   }`}>
                   <Icon className="w-3 h-3" />{t.label}
                 </button>
@@ -309,7 +309,7 @@ export default function DriverProfile() {
                     <label className="block text-[10px] font-mono text-muted-foreground/40 uppercase tracking-wider mb-1.5">Setup Notes</label>
                     <textarea value={form.setup_notes} onChange={e => set('setup_notes')(e.target.value)} rows={4}
                       placeholder="Suspension settings, motor controller tuning, special configurations..."
-                      className="w-full px-3 py-2.5 rounded border border-border bg-card/40 text-foreground font-mono text-sm resize-none focus:outline-none focus:border-primary/40 transition-all placeholder:text-muted-foreground/20" />
+                      className="w-full px-3 py-2.5 rounded border border-[#262B3B] bg-[#141720] text-white font-mono text-sm resize-none focus:outline-none focus:border-[#FF1E42] transition-all placeholder:text-white/20" />
                   </div>
                 </div>
               )}
@@ -321,7 +321,7 @@ export default function DriverProfile() {
                   </label>
                   <textarea value={form.notes} onChange={e => set('notes')(e.target.value)} rows={12}
                     placeholder="Driving style notes, communication preferences, known strengths, weaknesses, medical considerations..."
-                    className="w-full px-3 py-2.5 rounded border border-border bg-card/40 text-foreground font-mono text-sm resize-none focus:outline-none focus:border-primary/40 transition-all placeholder:text-muted-foreground/20" />
+                    className="w-full px-3 py-2.5 rounded border border-[#262B3B] bg-[#141720] text-white font-mono text-sm resize-none focus:outline-none focus:border-[#FF1E42] transition-all placeholder:text-white/20" />
                 </div>
               )}
 

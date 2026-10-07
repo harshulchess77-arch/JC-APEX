@@ -4,7 +4,7 @@ import { ArrowLeft, Activity, Zap, Battery, Gauge, Radio, Signal } from 'lucide-
 import { AreaChart, Area, LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
 import { useTelemetry } from '../hooks/useTelemetry';
 
-const tip = { contentStyle: { background: '#0B0E14', border: '1px solid rgba(255,255,255,0.06)', fontSize: 10, borderRadius: 4 }, labelStyle: { color: '#fff' } };
+const tip = { contentStyle: { background: '#08090C', border: '1px solid rgba(255,255,255,0.06)', fontSize: 10, borderRadius: 4 }, labelStyle: { color: '#fff' } };
 
 function LiveMetricPanel({ label, value, unit, color, max, data, dataKey }) {
   // Defensive fallbacks for rapid 5 Hz telemetry updates
@@ -14,7 +14,7 @@ function LiveMetricPanel({ label, value, unit, color, max, data, dataKey }) {
   const safeDataKey = dataKey ?? 'value';
   const pct = Math.min((safeValue / safeMax) * 100, 100);
   return (
-    <div className="rounded border border-white/[0.06] bg-[#0B0E14] p-3">
+    <div className="rounded border border-white/[0.06] bg-[#08090C] p-3">
       <div className="flex items-center justify-between mb-1">
         <span className="text-[8px] font-mono tracking-widest text-white/20 uppercase">{label}</span>
         <div className="flex items-center gap-1">
@@ -51,7 +51,7 @@ function LiveMetricPanel({ label, value, unit, color, max, data, dataKey }) {
 function StatusBadge({ label, value, unit, color, icon: Icon }) {
   const safeValue = value ?? 0;
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 rounded border border-white/[0.08] bg-[#0B0E14]/50">
+    <div className="flex items-center gap-2 px-3 py-1.5 rounded border border-white/[0.08] bg-[#08090C]/50">
       {Icon && <Icon className="w-3 h-3" style={{ color }} />}
       <span className="text-[7px] font-mono text-white/40 uppercase">{label}</span>
       <span className="text-[8px] font-mono font-bold" style={{ color }}>{typeof safeValue === 'number' ? safeValue.toFixed(1) : safeValue}</span>
@@ -78,29 +78,29 @@ export default function TelemetryDashboard() {
 
   const throttleData = safeChartData.map(d => ({ ...d, throttle: d.efficiency ?? 0 }));
 
-  // F1 Color Palette
+  // JC-APEX Crimson Red F1 Color Palette
   const colors = {
-    neonGreen: '#00FF66',
-    vividRed: '#FF0033',
-    signalYellow: '#FFD600',
-    signalOrange: '#FF6B00',
-    carbonDark: '#0B0E14',
+    crimsonRed: '#FF1E42',
+    nominalGreen: '#10B981',
+    signalYellow: '#FFB300',
+    dataCyan: '#00E5FF',
+    carbonDark: '#08090C',
   };
 
   return (
-    <div className="min-h-screen bg-[#0B0E14] flex flex-col">
-      <header className="flex items-center justify-between px-5 h-11 border-b border-white/[0.06] bg-[#0B0E14] flex-shrink-0">
+    <div className="min-h-screen bg-[#08090C] flex flex-col">
+      <header className="flex items-center justify-between px-5 h-11 border-b border-white/[0.06] bg-[#08090C] flex-shrink-0">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate('/pit')} className="text-white/20 hover:text-white/60 transition-colors">
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div className="w-px h-4 bg-white/10" />
-          <Activity className="w-4 h-4" style={{ color: colors.neonGreen }} />
+          <Activity className="w-4 h-4" style={{ color: colors.crimsonRed }} />
           <span className="font-display font-black text-sm tracking-widest text-white">TELEMETRY DASHBOARD</span>
         </div>
         <div className="flex items-center gap-3 text-[8px] font-mono">
-          <div className="flex items-center gap-1.5" style={{ color: colors.neonGreen }}>
-            <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: colors.neonGreen }} />
+          <div className="flex items-center gap-1.5" style={{ color: colors.nominalGreen }}>
+            <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: colors.nominalGreen }} />
             LIVE · 5Hz
           </div>
           <span className="text-white/20">{formatTime(safeTelemetry.raceTime ?? 0)}</span>
@@ -118,19 +118,19 @@ export default function TelemetryDashboard() {
       <div className="flex-1 overflow-auto p-4 space-y-4">
         {/* Live Telemetry Status Badges */}
         <div className="flex flex-wrap gap-2">
-          <StatusBadge label="Power" value={safePower / 1000} unit="kW" color={colors.neonGreen} icon={Zap} />
-          <StatusBadge label="Voltage" value={safeTelemetry.voltage} unit="V" color={colors.neonGreen} icon={Battery} />
-          <StatusBadge label="Current" value={safeTelemetry.current} unit="A" color={colors.neonGreen} icon={Gauge} />
+          <StatusBadge label="Power" value={safePower / 1000} unit="kW" color={colors.nominalGreen} icon={Zap} />
+          <StatusBadge label="Voltage" value={safeTelemetry.voltage} unit="V" color={colors.nominalGreen} icon={Battery} />
+          <StatusBadge label="Current" value={safeTelemetry.current} unit="A" color={colors.nominalGreen} icon={Gauge} />
           <StatusBadge label="Hall Spd" value={safeTelemetry.speed_hall} unit="mph" color={colors.signalYellow} icon={Radio} />
           <StatusBadge label="GPS Spd" value={safeTelemetry.speed_gps} unit="mph" color={colors.signalYellow} icon={Radio} />
-          <StatusBadge label="RSSI" value={safeHardwareData.rssi} unit="dBm" color={safeHardwareData.rssi < -70 ? colors.vividRed : colors.neonGreen} icon={Signal} />
-          <StatusBadge label="SNR" value={safeHardwareData.snr} unit="dB" color={safeHardwareData.snr < 5 ? colors.vividRed : colors.neonGreen} icon={Signal} />
+          <StatusBadge label="RSSI" value={safeHardwareData.rssi} unit="dBm" color={safeHardwareData.rssi < -70 ? colors.crimsonRed : colors.nominalGreen} icon={Signal} />
+          <StatusBadge label="SNR" value={safeHardwareData.snr} unit="dB" color={safeHardwareData.snr < 5 ? colors.crimsonRed : colors.nominalGreen} icon={Signal} />
         </div>
 
         {/* Primary metrics */}
         <div className="grid grid-cols-3 gap-3">
-          <LiveMetricPanel label="Speed"      value={safeTelemetry.speed}      unit="mph" color={colors.vividRed} max={40}  data={safeChartData} dataKey="speed" />
-          <LiveMetricPanel label="Battery"    value={safeTelemetry.battery}    unit="%"   color={colors.neonGreen} max={100} data={safeChartData} dataKey="battery" />
+          <LiveMetricPanel label="Speed"      value={safeTelemetry.speed}      unit="mph" color={colors.crimsonRed} max={40}  data={safeChartData} dataKey="speed" />
+          <LiveMetricPanel label="Battery"    value={safeTelemetry.battery}    unit="%"   color={colors.nominalGreen} max={100} data={safeChartData} dataKey="battery" />
           <LiveMetricPanel label="Temp"       value={safeTelemetry.temp}       unit="°C"  color={colors.signalYellow} max={80}  data={safeChartData} dataKey="temp" />
         </div>
         <div className="grid grid-cols-3 gap-3">
@@ -140,24 +140,24 @@ export default function TelemetryDashboard() {
         </div>
         {/* Power and Laps Remaining */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="rounded border border-white/[0.06] bg-[#0B0E14] p-4">
+          <div className="rounded border border-white/[0.06] bg-[#08090C] p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[8px] font-mono tracking-widest text-white/20 uppercase">Power Output</span>
-              <div className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: colors.neonGreen }} />
+              <div className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: colors.nominalGreen }} />
             </div>
             <div className="flex items-baseline gap-1">
-              <span className="text-3xl font-display font-black" style={{ color: colors.neonGreen }}>{safePower.toFixed(0)}</span>
+              <span className="text-3xl font-display font-black" style={{ color: colors.nominalGreen }}>{safePower.toFixed(0)}</span>
               <span className="text-[9px] font-mono text-white/20">Watts</span>
             </div>
             <div className="text-[7px] font-mono text-white/15 mt-1">V × I = {(safeTelemetry.voltage ?? 0).toFixed(1)}V × {(safeTelemetry.current ?? 0).toFixed(1)}A</div>
           </div>
-          <div className="rounded border border-white/[0.06] bg-[#0B0E14] p-4">
+          <div className="rounded border border-white/[0.06] bg-[#08090C] p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[8px] font-mono tracking-widest text-white/20 uppercase">Est. Laps Remaining</span>
-              <div className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: colors.neonGreen }} />
+              <div className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: colors.nominalGreen }} />
             </div>
             <div className="flex items-baseline gap-1">
-              <span className="text-3xl font-display font-black" style={{ color: colors.neonGreen }}>{safeEstimatedLaps}</span>
+              <span className="text-3xl font-display font-black" style={{ color: colors.nominalGreen }}>{safeEstimatedLaps}</span>
               <span className="text-[9px] font-mono text-white/20">laps</span>
             </div>
             <div className="text-[7px] font-mono text-white/15 mt-1">At current discharge rate</div>
@@ -165,10 +165,10 @@ export default function TelemetryDashboard() {
         </div>
 
         {/* Throttle position */}
-        <div className="rounded border border-white/[0.06] bg-[#0B0E14] p-4">
+        <div className="rounded border border-white/[0.06] bg-[#08090C] p-4">
           <div className="flex items-center justify-between mb-3">
             <span className="text-[9px] font-display font-bold tracking-widest text-white/40 uppercase">Throttle Position — Live</span>
-            <span className="text-xl font-display font-black" style={{ color: colors.neonGreen }}>{(safeTelemetry.efficiency ?? 0).toFixed(0)}%</span>
+            <span className="text-xl font-display font-black" style={{ color: colors.nominalGreen }}>{(safeTelemetry.efficiency ?? 0).toFixed(0)}%</span>
           </div>
           <div className="h-8 bg-white/[0.03] rounded-lg overflow-hidden mb-2">
             <div className="h-full rounded-lg transition-all duration-300"
@@ -194,11 +194,11 @@ export default function TelemetryDashboard() {
         </div>
 
         {/* Multi-channel overlay */}
-        <div className="rounded border border-white/[0.06] bg-[#0B0E14] p-4">
+        <div className="rounded border border-white/[0.06] bg-[#08090C] p-4">
           <div className="flex items-center justify-between mb-3">
             <span className="text-[9px] font-display font-bold tracking-widest text-white/40 uppercase">Multi-Channel Overlay</span>
             <div className="flex items-center gap-4 text-[8px] font-mono text-white/30">
-              {[{ label: 'SPEED', color: colors.vividRed }, { label: 'BATT', color: colors.neonGreen }, { label: 'TEMP', color: colors.signalYellow }, { label: 'EFF', color: '#a78bfa' }].map(c => (
+              {[{ label: 'SPEED', color: colors.crimsonRed }, { label: 'BATT', color: colors.nominalGreen }, { label: 'TEMP', color: colors.signalYellow }, { label: 'EFF', color: '#a78bfa' }].map(c => (
                 <span key={c.label} className="flex items-center gap-1">
                   <span className="w-3 h-0.5 inline-block" style={{ backgroundColor: c.color }} />{c.label}
                 </span>
@@ -211,8 +211,8 @@ export default function TelemetryDashboard() {
                 <XAxis dataKey="time" tick={{ fontSize: 8, fill: '#444' }} axisLine={false} tickLine={false} interval={15} />
                 <YAxis tick={{ fontSize: 8, fill: '#444' }} axisLine={false} tickLine={false} />
                 <Tooltip {...tip} />
-                <Line type="monotone" dataKey="speed"      stroke={colors.vividRed} strokeWidth={1.5} dot={false} isAnimationActive={false} />
-                <Line type="monotone" dataKey="battery"    stroke={colors.neonGreen} strokeWidth={1.5} dot={false} isAnimationActive={false} />
+                <Line type="monotone" dataKey="speed"      stroke={colors.crimsonRed} strokeWidth={1.5} dot={false} isAnimationActive={false} />
+                <Line type="monotone" dataKey="battery"    stroke={colors.nominalGreen} strokeWidth={1.5} dot={false} isAnimationActive={false} />
                 <Line type="monotone" dataKey="temp"       stroke={colors.signalYellow} strokeWidth={1.5} dot={false} isAnimationActive={false} />
                 <Line type="monotone" dataKey="efficiency" stroke="#a78bfa" strokeWidth={1.5} dot={false} isAnimationActive={false} />
               </LineChart>

@@ -82,7 +82,7 @@ export default function HeroSection() {
         <h1 className="font-sans font-black leading-none mb-4">
           <div className="text-6xl sm:text-8xl md:text-[10rem] tracking-tight">
             <span className="text-foreground">JC </span>
-            <span className="text-primary glow-red-text">APEX</span>
+            <span className="text-[#FF1E42] drop-shadow-[0_0_30px_rgba(255,30,66,0.6)]">APEX</span>
           </div>
           <div className="text-base md:text-xl font-mono font-normal tracking-[0.5em] text-muted-foreground/50 uppercase mt-3">
             Intelligence · Precision · Control
@@ -108,7 +108,7 @@ export default function HeroSection() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
           <Link
             to="/login"
-            className="group relative inline-flex items-center gap-3 px-8 py-4 bg-primary text-primary-foreground font-mono text-sm font-bold tracking-wider uppercase rounded glow-red hover:bg-primary/90 transition-all"
+            className="group relative inline-flex items-center gap-3 px-8 py-4 bg-[#FF1E42] text-white font-mono text-sm font-bold tracking-wider uppercase rounded hover:bg-[#E01335] transition-all shadow-[0_0_20px_rgba(255,30,66,0.4)]"
           >
             <Cpu className="w-4 h-4" />
             OPERATOR LOGIN
@@ -116,13 +116,13 @@ export default function HeroSection() {
           </Link>
           <Link
             to="/pit"
-            className="inline-flex items-center gap-2 px-8 py-4 border border-border text-foreground font-mono text-sm font-semibold tracking-wider uppercase rounded hover:bg-secondary hover:text-foreground transition-all"
+            className="inline-flex items-center gap-2 px-8 py-4 border border-[#2A2E3D] bg-black/40 text-white font-mono text-sm font-semibold tracking-wider uppercase rounded hover:bg-black/60 transition-all"
           >
             PIT CREW DASHBOARD
           </Link>
           <Link
             to="/driver"
-            className="inline-flex items-center gap-2 px-8 py-4 border border-green-500/30 text-green-400 font-mono text-sm font-semibold tracking-wider uppercase rounded hover:bg-green-500/10 transition-all"
+            className="inline-flex items-center gap-2 px-8 py-4 border border-[#2A2E3D] bg-black/40 text-white font-mono text-sm font-semibold tracking-wider uppercase rounded hover:bg-black/60 transition-all"
           >
             DRIVER HUD
           </Link>
@@ -160,10 +160,10 @@ export default function HeroSection() {
           {stats.map((stat) => (
             <div
               key={stat.label}
-              className="relative p-4 rounded border border-border bg-card/40 backdrop-blur-sm group hover:border-primary/30 transition-colors"
+              className="relative p-4 rounded border border-border bg-card/40 backdrop-blur-sm group hover:border-[#FF1E42]/30 transition-colors"
             >
-              <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-              <div className="text-2xl md:text-3xl font-mono font-bold text-primary glow-red-text mb-1">
+              <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#FF1E42]/30 to-transparent" />
+              <div className="text-2xl md:text-3xl font-mono font-bold text-white mb-1">
                 {stat.value}
               </div>
               <div className="text-[10px] font-mono text-foreground/80 tracking-wider uppercase font-semibold">

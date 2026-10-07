@@ -9,18 +9,18 @@ export default function TelemetryGauge({ label, value, unit, max, icon: Icon, co
   const percentage = Math.min(100, (safeValue / safeMax) * 100);
 
   const colorClasses = {
-    red: 'text-[#FF0033]',
-    green: 'text-[#00FF66]',
-    yellow: 'text-[#FFD600]',
-    blue: 'text-[#60a5fa]',
+    red: 'text-[#FF1E42]',
+    green: 'text-[#10B981]',
+    yellow: 'text-[#FFB300]',
+    blue: 'text-[#00E5FF]',
     white: 'text-foreground',
   };
 
   const barClasses = {
-    red: 'bg-[#FF0033]',
-    green: 'bg-[#00FF66]',
-    yellow: 'bg-[#FFD600]',
-    blue: 'bg-[#60a5fa]',
+    red: 'bg-[#FF1E42]',
+    green: 'bg-[#10B981]',
+    yellow: 'bg-[#FFB300]',
+    blue: 'bg-[#00E5FF]',
     white: 'bg-foreground',
   };
 
