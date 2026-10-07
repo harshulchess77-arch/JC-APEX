@@ -97,9 +97,10 @@ const float ADC_MAX_COUNT = 4095.0f;
 // 48V Battery Voltage Divider: R1 = 820000 (820kΩ, positive), R2 = 47000 (47kΩ, ground)
 // Math multiplier: (820 + 47) / 47 = 18.4468
 // Equation: trueVoltage = (analogRead(19) * 3.3 / 4095.0) * 18.4468;
+// Calibrated against multimeter reading: 56.0V actual / 51.0V software (Factor: 1.098)
 const float BATT_R1 = 820000.0f;
 const float BATT_R2 = 47000.0f;
-const float BATT_VOLTAGE_DIVIDER_FACTOR = 18.4468f;
+const float BATT_VOLTAGE_DIVIDER_FACTOR = 20.24f;
 
 // WCS1600 Current Sensor: R1 = 10kΩ, R2 = 18kΩ
 // Factor = (10 + 18) / 18 ≈ 1.5555556
@@ -274,9 +275,8 @@ float readCurrentSensor() {
  * Equation: trueVoltage = (adcValue * 3.3 / 4095.0) * ((R1 + R2) / R2)
  */
 float readBatteryVoltage() {
-  // Equation: trueVoltage = ((analogRead(19) * 3.3 / 4095.0) * 18.4468)+5;
   int rawAdc = analogRead(BATTERY_VOLTAGE_PIN);
-  float trueVoltage = ((float)rawAdc * 3.3f / 4095.0f) * 18.4468f;
+  float trueVoltage = ((float)rawAdc * 3.3f / 4095.0f) * BATT_VOLTAGE_DIVIDER_FACTOR;
 
   if (trueVoltage < 0.5f) {
     trueVoltage = 0.0f; // Clean zero baseline when pack is disconnected
