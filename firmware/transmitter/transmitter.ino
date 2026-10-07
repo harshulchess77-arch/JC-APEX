@@ -274,7 +274,7 @@ float readCurrentSensor() {
  * Equation: trueVoltage = (adcValue * 3.3 / 4095.0) * ((R1 + R2) / R2)
  */
 float readBatteryVoltage() {
-  // Equation: trueVoltage = (analogRead(19) * 3.3 / 4095.0) * 18.4468;
+  // Equation: trueVoltage = ((analogRead(19) * 3.3 / 4095.0) * 18.4468)+5;
   int rawAdc = analogRead(BATTERY_VOLTAGE_PIN);
   float trueVoltage = ((float)rawAdc * 3.3f / 4095.0f) * 18.4468f;
 
