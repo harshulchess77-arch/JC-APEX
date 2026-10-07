@@ -73,19 +73,22 @@ class OnlineTelemetryBridge:
     def _init_csv_backup(self):
         try:
             with open(self.csv_backup, 'w') as f:
-                f.write("session_id,packet_id,current,voltage,power,speed_hall,speed_gps,latitude,longitude,rssi,snr,timestamp\n")
+                f.write("timestamp,id,volts,amps,watts,speed_h,speed_g,latitude,longitude,rssi,snr\n")
         except Exception as e:
             print(f"[BACKUP WARNING] Could not initialize CSV file: {e}")
 
     def auto_detect_serial_port(self):
-        """Auto-detects CP210x, CH340, or Heltec USB Serial port."""
+        """Auto-detects Silicon Labs CP210x / USB Serial devices with fallback."""
         ports = serial.tools.list_ports.comports()
         print("\n[SERIAL] Scanning available ports:")
         candidates = []
         for p in ports:
             print(f"  - {p.device}: {p.description}")
             desc = (p.description or '').lower()
-            if any(k in desc for k in ['usb', 'uart', 'cp210', 'ch340', 'heltec', 'serial', 'espressif']):
+            # Prioritize Silicon Labs CP210x
+            if 'cp210' in desc or 'silicon labs' in desc:
+                candidates.insert(0, p.device)
+            elif any(k in desc for k in ['usb', 'uart', 'ch340', 'heltec', 'serial', 'espressif']):
                 candidates.append(p.device)
 
         if candidates:
@@ -129,9 +132,8 @@ class OnlineTelemetryBridge:
                 print("[SUPABASE FALLBACK] Retrying with core telemetry schema until migration is run...")
                 self.schema_fallback_active = True
                 legacy_payload = {
-                    "session_id": payload["session_id"],
-                    "packet_id": payload["packet_id"],
-                    "current": payload["current"],
+                    "id": payload["id"],
+                    "amps": payload["amps"],
                     "rssi": payload["rssi"],
                     "snr": payload["snr"],
                     "created_at": payload["created_at"]
@@ -144,109 +146,117 @@ class OnlineTelemetryBridge:
             print(f"[SUPABASE EXCEPTION] {e}")
 
     def run(self):
-        if not self.connect():
-            return
-
         print("\n========================================================")
         print("  JC-APEX BRIDGE ONLINE - LISTENING FOR 48V LORA DATA   ")
         print("========================================================\n")
 
-        # Give serial port a moment to stabilize
-        time.sleep(1.0)
-        self.serial_conn.reset_input_buffer()
-
         while self.running:
+            if not self.connect():
+                print("[RECONNECT] Retrying in 2 seconds...")
+                time.sleep(2)
+                continue
+
+            # Give serial port a moment to stabilize
+            time.sleep(1.0)
+            self.serial_conn.reset_input_buffer()
+
             try:
-                line_bytes = self.serial_conn.readline()
-                if not line_bytes:
-                    continue
+                while self.running and self.serial_conn and self.serial_conn.is_open:
+                    try:
+                        line_bytes = self.serial_conn.readline()
+                        if not line_bytes:
+                            continue
 
-                line_str = line_bytes.decode('utf-8', errors='ignore').strip()
-                if not line_str:
-                    continue
+                        line_str = line_bytes.decode('utf-8', errors='ignore').strip()
+                        if not line_str:
+                            continue
 
-                # Defensive check: Only accept curly-braced JSON strings
-                if not line_str.startswith('{') or not line_str.endswith('}'):
-                    continue
+                        # Defensive check: Only accept curly-braced JSON strings
+                        if not line_str.startswith('{') or not line_str.endswith('}'):
+                            continue
 
-                try:
-                    data = json.loads(line_str)
-                except json.JSONDecodeError:
-                    # Gracefully ignore partial or corrupted serial lines caused by car vibration
-                    continue
+                        try:
+                            data = json.loads(line_str)
+                        except json.JSONDecodeError:
+                            # Gracefully ignore partial or corrupted serial lines caused by car vibration
+                            continue
 
-                # Extract packet metrics supporting both new format and legacy aliases
-                packet_id = int(data.get('id') if 'id' in data else data.get('packet_id', 0))
-                current_amps = float(data.get('amps') if 'amps' in data else data.get('current', 0.0))
-                voltage_volts = float(data.get('volts') if 'volts' in data else data.get('voltage', 0.0))
-                
-                # Derive or extract power in Watts
-                if 'watts' in data:
-                    power_watts = float(data['watts'])
-                elif 'power' in data:
-                    power_watts = float(data['power'])
-                else:
-                    power_watts = round(voltage_volts * current_amps, 2)
+                        # Extract packet metrics supporting both primary and legacy keys
+                        packet_id = int(data.get("id") or data.get("packet_id", 0))
+                        amps = float(data.get("amps") or data.get("current", 0.0))
+                        volts = float(data.get("volts") or data.get("voltage", 0.0))
 
-                speed_hall = float(data.get('speed_h') if 'speed_h' in data else data.get('speed_hall', 0.0))
-                speed_gps = float(data.get('speed_g') if 'speed_g' in data else data.get('speed_gps', 0.0))
-                lat = float(data.get('lat') if 'lat' in data else data.get('latitude', 0.0))
-                lng = float(data.get('lng') if 'lng' in data else data.get('longitude', 0.0))
-                rssi = int(data.get('rssi', -80))
-                snr = float(data.get('snr', 9.0))
-                iso_time = datetime.now(timezone.utc).isoformat()
+                        # Derive or extract power in Watts
+                        if 'watts' in data:
+                            watts = float(data['watts'])
+                        elif 'power' in data:
+                            watts = float(data['power'])
+                        else:
+                            watts = round(volts * amps, 2)
 
-                self.packet_count += 1
+                        speed_h = float(data.get("speed_h") or data.get("speed_hall", 0.0))
+                        speed_g = float(data.get("speed_g") or data.get("speed_gps", 0.0))
+                        lat = float(data.get("lat") or data.get("latitude", 0.0))
+                        lng = float(data.get("lng") or data.get("longitude", 0.0))
+                        rssi = int(data.get("rssi", -80))
+                        snr = float(data.get("snr", 9.0))
+                        iso_time = datetime.now(timezone.utc).isoformat()
 
-                # Check for dropped packet gaps
-                if self.last_packet_id >= 0 and packet_id > (self.last_packet_id + 1):
-                    gap = packet_id - (self.last_packet_id + 1)
-                    print(f"⚠️  PACKET GAP: {gap} packet(s) dropped between #{self.last_packet_id} and #{packet_id}")
+                        self.packet_count += 1
 
-                self.last_packet_id = packet_id
+                        # Check for dropped packet gaps
+                        if self.last_packet_id >= 0 and packet_id > (self.last_packet_id + 1):
+                            gap = packet_id - (self.last_packet_id + 1)
+                            print(f"⚠️  PACKET GAP: {gap} packet(s) dropped between #{self.last_packet_id} and #{packet_id}")
 
-                # Console Telemetry Visualizer
-                print(f"[{datetime.now().strftime('%H:%M:%S')}] PKT #{packet_id:<5} | "
-                      f"{voltage_volts:>5.1f}V | {current_amps:>5.2f}A | {power_watts:>6.1f}W | "
-                      f"SpdH: {speed_hall:>4.1f}mph | GPS: {speed_gps:>4.1f}mph | "
-                      f"RSSI: {rssi:>4}dBm -> [LIVE]")
+                        self.last_packet_id = packet_id
 
-                # 1. Append to local CSV backup
-                try:
-                    with open(self.csv_backup, 'a') as f:
-                        f.write(f"{self.session_id},{packet_id},{current_amps:.2f},{voltage_volts:.2f},{power_watts:.2f},"
-                                f"{speed_hall:.2f},{speed_gps:.2f},{lat:.6f},{lng:.6f},{rssi},{snr:.1f},{iso_time}\n")
-                except Exception:
-                    pass
+                        # Console Telemetry Visualizer
+                        print(f"[{datetime.now().strftime('%H:%M:%S')}] PKT #{packet_id:<5} | "
+                              f"{volts:>5.1f}V | {amps:>5.2f}A | {watts:>6.1f}W | "
+                              f"SpdH: {speed_h:>4.1f}mph | GPS: {speed_g:>4.1f}mph | "
+                              f"RSSI: {rssi:>4}dBm -> [LIVE]")
 
-                # 2. Push directly to Supabase telemetry_logs table
-                db_payload = {
-                    "session_id": self.session_id,
-                    "packet_id": packet_id,
-                    "current": round(current_amps, 2),
-                    "voltage": round(voltage_volts, 2),
-                    "power": round(power_watts, 2),
-                    "speed_hall": round(speed_hall, 2),
-                    "speed_gps": round(speed_gps, 2),
-                    "latitude": round(lat, 6),
-                    "longitude": round(lng, 6),
-                    "rssi": rssi,
-                    "snr": round(snr, 1),
-                    "created_at": iso_time
-                }
+                        # 1. Append to local CSV backup
+                        try:
+                            with open(self.csv_backup, 'a') as f:
+                                f.write(f"{iso_time},{packet_id},{volts:.2f},{amps:.2f},{watts:.2f},"
+                                        f"{speed_h:.2f},{speed_g:.2f},{lat:.6f},{lng:.6f},{rssi},{snr:.1f}\n")
+                        except Exception:
+                            pass
 
-                if self.schema_fallback_active:
-                    legacy_payload = {
-                        "session_id": self.session_id,
-                        "packet_id": packet_id,
-                        "current": round(current_amps, 2),
-                        "rssi": rssi,
-                        "snr": round(snr, 1),
-                        "created_at": iso_time
-                    }
-                    self.push_to_supabase(legacy_payload)
-                else:
-                    self.push_to_supabase(db_payload)
+                        # 2. Push directly to Supabase telemetry_logs table
+                        db_payload = {
+                            "id": packet_id,
+                            "volts": round(volts, 2),
+                            "amps": round(amps, 2),
+                            "watts": round(watts, 2),
+                            "speed_h": round(speed_h, 2),
+                            "speed_g": round(speed_g, 2),
+                            "rssi": rssi,
+                            "snr": round(snr, 1),
+                            "created_at": iso_time
+                        }
+
+                        if self.schema_fallback_active:
+                            legacy_payload = {
+                                "id": packet_id,
+                                "amps": round(amps, 2),
+                                "rssi": rssi,
+                                "snr": round(snr, 1),
+                                "created_at": iso_time
+                            }
+                            self.push_to_supabase(legacy_payload)
+                        else:
+                            self.push_to_supabase(db_payload)
+
+                    except serial.SerialException as e:
+                        print(f"[SERIAL ERROR] Connection lost: {e}")
+                        if self.serial_conn:
+                            self.serial_conn.close()
+                        print("[RECONNECT] Reconnecting in 2 seconds...")
+                        time.sleep(2)
+                        break
 
             except KeyboardInterrupt:
                 print("\n[SHUTDOWN] Stopping telemetry bridge...")

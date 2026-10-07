@@ -280,19 +280,20 @@ export function useTelemetry(sessionId = null, enabled = true, options = {}) {
           const data = payload.new;
 
           // Parse live hardware fields with defensive numeric fallbacks
-          const currentVal = Number(data.current != null ? data.current : (data.amps != null ? data.amps : 0));
-          const voltageVal = Number(data.voltage != null ? data.voltage : (data.volts != null ? data.volts : 0));
+          // Support both legacy (current, voltage, power, speed_hall, speed_gps) and new (amps, volts, watts, speed_h, speed_g) field names
+          const currentVal = Number(data?.amps ?? data?.current ?? 0);
+          const voltageVal = Number(data?.volts ?? data?.voltage ?? 0);
           const powerVal = Number(
-            data.power != null
-              ? data.power
-              : (data.watts != null ? data.watts : (currentVal * voltageVal))
+            data?.watts ?? data?.power ?? (currentVal * voltageVal)
           );
-          const speedHallVal = Number(data.speed_hall != null ? data.speed_hall : (data.speed_h != null ? data.speed_h : 0));
-          const speedGpsVal = Number(data.speed_gps != null ? data.speed_gps : (data.speed_g != null ? data.speed_g : 0));
+          const speedHallVal = Number(data?.speed_h ?? data?.speed_hall ?? 0);
+          const speedGpsVal = Number(data?.speed_g ?? data?.speed_gps ?? 0);
           // Live vehicle speed: prefer Hall sensor, fall back to GPS speed
           const speedVal = speedHallVal > 0 ? speedHallVal : speedGpsVal;
-          const latVal = Number(data.latitude != null ? data.latitude : (data.lat != null ? data.lat : 0));
-          const lngVal = Number(data.longitude != null ? data.longitude : (data.lng != null ? data.lng : 0));
+          const latVal = Number(data?.latitude ?? data?.lat ?? 0);
+          const lngVal = Number(data?.longitude ?? data?.lng ?? 0);
+          const rssiVal = Number(data?.rssi ?? -80);
+          const snrVal = Number(data?.snr ?? 0);
 
           // 48V Li-ion pack estimation: ~42.0V (0%) to ~54.6V (100%)
           let batteryPct = 0;
@@ -309,11 +310,11 @@ export function useTelemetry(sessionId = null, enabled = true, options = {}) {
             speed: speedVal,
             latitude: latVal,
             longitude: lngVal,
-            rssi: data.rssi || 0,
-            snr: data.snr || 0,
-            packetId: data.packet_id || data.id,
-            timestamp: data.created_at,
-            sessionId: data.session_id,
+            rssi: rssiVal,
+            snr: snrVal,
+            packetId: data?.packet_id ?? data?.id,
+            timestamp: data?.created_at,
+            sessionId: data?.session_id,
           });
 
           // Live incoming hardware updates metrics from baseline
@@ -331,7 +332,7 @@ export function useTelemetry(sessionId = null, enabled = true, options = {}) {
             efficiency: speedVal > 0 ? Math.min(100, Math.round((speedVal / 35.0) * 100)) : 0,
           }));
 
-          setActiveSessionId(data.session_id);
+          setActiveSessionId(data?.session_id);
           const now = new Date();
           setLastUpdate(now);
           setIsConnected(true);
@@ -502,11 +503,11 @@ export function useTelemetry(sessionId = null, enabled = true, options = {}) {
     chartData,
     sendCommand,
     formatTime,
-    estimatedLapsRemaining: telemetry.battery > 0 ? Math.max(1, Math.round((telemetry.battery / 100) * (telemetry.totalLaps || 30))) : 0,
+    estimatedLapsRemaining: telemetry?.battery > 0 ? Math.max(1, Math.round((telemetry.battery / 100) * (telemetry.totalLaps || 30))) : 0,
     signalLost: !isLive,
     lastPacketTime: lastUpdate ? lastUpdate.getTime() : 0,
-    targetPace: { label: '25 MPH', zone: 'green', color: '#22c55e' },
-    power: telemetry.power || Math.round(telemetry.current * telemetry.voltage),
+    targetPace: { label: '25 MPH', zone: 'green', color: '#00FF66' },
+    power: telemetry?.power ?? Math.round((telemetry?.current ?? 0) * (telemetry?.voltage ?? 0)),
     thermalAlert,
     voltageAlert,
     hardwareData,

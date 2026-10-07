@@ -2,26 +2,32 @@ import React from 'react';
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 
 export default function LiveChart({ data, dataKey, color, label }) {
+  // Defensive fallbacks for rapid 5 Hz telemetry updates
+  const safeData = data ?? [];
+  const safeDataKey = dataKey ?? 'value';
+  const safeColor = color ?? 'green';
+  const safeLabel = label ?? 'Metric';
+
   const colorMap = {
-    red: '#ef4444',
-    green: '#22c55e',
-    yellow: '#eab308',
+    red: '#FF0033',
+    green: '#00FF66',
+    yellow: '#FFD600',
     blue: '#60a5fa',
     white: '#f5f5f5',
   };
-  
-  const hexColor = colorMap[color] || colorMap.red;
+
+  const hexColor = colorMap[safeColor] || colorMap.green;
 
   return (
     <div className="rounded border border-border bg-card/30 p-4">
       <div className="text-xs font-mono tracking-wider text-muted-foreground uppercase mb-3">
-        {label}
+        {safeLabel}
       </div>
       <div className="h-[120px]">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data}>
+          <AreaChart data={safeData}>
             <defs>
-              <linearGradient id={`gradient-${dataKey}`} x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id={`gradient-${safeDataKey}`} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor={hexColor} stopOpacity={0.3} />
                 <stop offset="100%" stopColor={hexColor} stopOpacity={0} />
               </linearGradient>
@@ -30,8 +36,8 @@ export default function LiveChart({ data, dataKey, color, label }) {
             <YAxis hide domain={['auto', 'auto']} />
             <Tooltip
               contentStyle={{
-                background: 'hsl(0, 0%, 7%)',
-                border: '1px solid hsl(0, 0%, 15%)',
+                background: 'hsl(215, 20%, 6%)',
+                border: '1px solid hsl(215, 20%, 15%)',
                 borderRadius: '4px',
                 fontSize: '11px',
                 fontFamily: 'JetBrains Mono, monospace',
@@ -40,10 +46,10 @@ export default function LiveChart({ data, dataKey, color, label }) {
             />
             <Area
               type="monotone"
-              dataKey={dataKey}
+              dataKey={safeDataKey}
               stroke={hexColor}
               strokeWidth={1.5}
-              fill={`url(#gradient-${dataKey})`}
+              fill={`url(#gradient-${safeDataKey})`}
               dot={false}
               isAnimationActive={false}
             />

@@ -1,5 +1,7 @@
 {
+  "buildCommand": "cd web && npm run build",
   "outputDirectory": "web/dist",
+  "installCommand": "cd web && npm install",
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [

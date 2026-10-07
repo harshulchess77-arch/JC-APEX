@@ -229,9 +229,18 @@ void loop() {
       // Calculate watts if zero
       watts = volts * amps;
 
-      // Print formatted output matching Transmitter layout
-      Serial.printf("[RX #%lu] %5.1fV | %5.2fA | %6.1fW | Hall: %4.1fmph | GPS: %4.1fmph | RSSI: %ddBm | SNR: %.1fdB | OK\n",
-                    packetId, volts, amps, watts, speedHall, speedGps, rssi, snr);
+      // Output JSON for Python bridge compatibility
+      StaticJsonDocument<256> doc;
+      doc["id"] = packetId;
+      doc["amps"] = amps;
+      doc["volts"] = volts;
+      doc["watts"] = watts;
+      doc["speed_h"] = speedHall;
+      doc["speed_g"] = speedGps;
+      doc["rssi"] = rssi;
+      doc["snr"] = snr;
+      serializeJson(doc, Serial);
+      Serial.println();
 
       // Update onboard OLED display
       updateOLED(packetId, volts, amps, watts, speedHall, speedGps, rssi, snr);

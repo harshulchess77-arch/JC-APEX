@@ -6,30 +6,31 @@
 
 @layer base {
   :root {
-    --background: 0 0% 5%;
+    /* F1 Dark Aesthetic Theme */
+    --background: 215 20% 6%; /* #0B0E14 - Carbon Dark */
     --foreground: 0 0% 95%;
-    --card: 0 0% 7%;
+    --card: 215 20% 8%;
     --card-foreground: 0 0% 95%;
-    --popover: 0 0% 7%;
+    --popover: 215 20% 8%;
     --popover-foreground: 0 0% 95%;
-    --primary: 0 84% 60%;
+    --primary: 142 100% 50%; /* #00FF66 - Neon Green */
     --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 12%;
+    --secondary: 215 20% 12%;
     --secondary-foreground: 0 0% 80%;
-    --muted: 0 0% 12%;
+    --muted: 215 20% 12%;
     --muted-foreground: 0 0% 50%;
-    --accent: 0 84% 60%;
+    --accent: 142 100% 50%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%;
+    --destructive: 348 100% 50%; /* #FF0033 - Vivid Red */
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 15%;
-    --input: 0 0% 15%;
-    --ring: 0 84% 60%;
-    --chart-1: 0 84% 60%;
+    --border: 215 20% 15%;
+    --input: 215 20% 15%;
+    --ring: 142 100% 50%;
+    --chart-1: 142 100% 50%;
     --chart-2: 0 0% 40%;
     --chart-3: 0 0% 60%;
     --chart-4: 0 0% 25%;
-    --chart-5: 0 84% 45%;
+    --chart-5: 142 100% 45%;
     --radius: 0.5rem;
     --font-mono: 'JetBrains Mono', monospace;
     --font-sans: 'Inter', sans-serif;
@@ -38,30 +39,30 @@
   }
 
   .dark {
-    --background: 0 0% 5%;
+    --background: 215 20% 6%; /* #0B0E14 - Carbon Dark */
     --foreground: 0 0% 95%;
-    --card: 0 0% 7%;
+    --card: 215 20% 8%;
     --card-foreground: 0 0% 95%;
-    --popover: 0 0% 7%;
+    --popover: 215 20% 8%;
     --popover-foreground: 0 0% 95%;
-    --primary: 0 84% 60%;
+    --primary: 142 100% 50%; /* #00FF66 - Neon Green */
     --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 12%;
+    --secondary: 215 20% 12%;
     --secondary-foreground: 0 0% 80%;
-    --muted: 0 0% 12%;
+    --muted: 215 20% 12%;
     --muted-foreground: 0 0% 50%;
-    --accent: 0 84% 60%;
+    --accent: 142 100% 50%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 348 100% 50%; /* #FF0033 - Vivid Red */
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 15%;
-    --input: 0 0% 15%;
-    --ring: 0 84% 60%;
-    --chart-1: 0 84% 60%;
+    --border: 215 20% 15%;
+    --input: 215 20% 15%;
+    --ring: 142 100% 50%;
+    --chart-1: 142 100% 50%;
     --chart-2: 0 0% 40%;
     --chart-3: 0 0% 60%;
     --chart-4: 0 0% 25%;
-    --chart-5: 0 84% 45%;
+    --chart-5: 142 100% 45%;
   }
 }
 
@@ -73,6 +74,16 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* F1 Race Control Theme Colors */
+:root {
+  --f1-carbon-dark: #0B0E14;
+  --f1-neon-green: #00FF66;
+  --f1-vivid-red: #FF0033;
+  --f1-signal-green: #00D93D;
+  --f1-signal-yellow: #FFD600;
+  --f1-signal-orange: #FF6B00;
 }
 
 /* Custom scrollbar */

@@ -61,18 +61,25 @@ class DataSync:
             sys.exit(1)
 
     def validate_record(self, record: dict) -> bool:
-        """Validate a single record"""
-        required_fields = ['session_id', 'packet_id', 'current', 'rssi', 'snr', 'timestamp']
-        for field in required_fields:
-            if field not in record:
-                print(f"Validation error: Missing field '{field}'")
-                return False
+        """Validate a single record with flexible column mapping"""
+        # Support both new and legacy CSV column names
+        id_field = record.get('id') or record.get('packet_id')
+        amps_field = record.get('amps') or record.get('current')
+        volts_field = record.get('volts') or record.get('voltage')
+        rssi = record.get('rssi')
+        snr = record.get('snr')
+        timestamp = record.get('timestamp')
+
+        if id_field is None or amps_field is None or rssi is None or snr is None or timestamp is None:
+            print(f"Validation error: Missing required fields - got {list(record.keys())}")
+            return False
 
         try:
-            int(record['packet_id'])
-            float(record['current'])
-            int(record['rssi'])
-            float(record['snr'])
+            int(id_field)
+            float(amps_field)
+            float(volts_field) if volts_field else True
+            int(rssi)
+            float(snr)
         except (ValueError, TypeError) as e:
             print(f"Validation error: Invalid data type - {e}")
             return False
@@ -80,21 +87,25 @@ class DataSync:
         return True
 
     def prepare_payload(self, record: dict) -> dict:
-        """Prepare Supabase payload from CSV record"""
+        """Prepare Supabase payload from CSV record with flexible column mapping"""
         return {
-            'session_id': record['session_id'],
-            'packet_id': int(record['packet_id']),
-            'current': float(record['current']),
-            'rssi': int(record['rssi']),
-            'snr': float(record['snr']),
-            'created_at': record['timestamp']
+            'id': int(record.get('id') or record.get('packet_id', 0)),
+            'volts': float(record.get('volts') or record.get('voltage', 0.0)),
+            'amps': float(record.get('amps') or record.get('current', 0.0)),
+            'watts': float(record.get('watts') or record.get('power', 0.0)),
+            'speed_h': float(record.get('speed_h') or record.get('speed_hall', 0.0)),
+            'speed_g': float(record.get('speed_g') or record.get('speed_gps', 0.0)),
+            'rssi': int(record.get('rssi', -80)),
+            'snr': float(record.get('snr', 9.0)),
+            'created_at': record.get('timestamp')
         }
 
     def sync_to_supabase(self, records: list, batch_size: int = 100):
-        """Sync records to Supabase in batches"""
+        """Sync records to Supabase in batches with schema fallback"""
         total_records = len(records)
         synced = 0
         failed = 0
+        schema_fallback_active = False
 
         for i in range(0, total_records, batch_size):
             batch = records[i:i + batch_size]
@@ -111,6 +122,33 @@ class DataSync:
                 if response.status_code in [200, 201]:
                     synced += len(payloads)
                     print(f"Synced batch {i//batch_size + 1}: {len(payloads)} records")
+                elif response.status_code == 400 and not schema_fallback_active:
+                    print(f"[SCHEMA NOTICE] Database schema missing columns: {response.text}")
+                    print("[FALLBACK] Retrying with core telemetry schema...")
+                    schema_fallback_active = True
+                    # Retry with minimal payload
+                    legacy_payloads = [
+                        {
+                            'id': p['id'],
+                            'amps': p['amps'],
+                            'rssi': p['rssi'],
+                            'snr': p['snr'],
+                            'created_at': p['created_at']
+                        }
+                        for p in payloads
+                    ]
+                    response = requests.post(
+                        self.rest_url,
+                        json=legacy_payloads,
+                        headers=self.headers,
+                        timeout=30
+                    )
+                    if response.status_code in [200, 201]:
+                        synced += len(legacy_payloads)
+                        print(f"Synced batch {i//batch_size + 1} (fallback): {len(legacy_payloads)} records")
+                    else:
+                        failed += len(payloads)
+                        print(f"ERROR: Batch {i//batch_size + 1} fallback failed - HTTP {response.status_code}: {response.text}")
                 else:
                     failed += len(payloads)
                     print(f"ERROR: Batch {i//batch_size + 1} failed - HTTP {response.status_code}: {response.text}")

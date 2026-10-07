@@ -44,16 +44,20 @@ class OfflineTelemetryLogger:
         return datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 
     def auto_detect_serial_port(self) -> Optional[str]:
-        """Auto-detect active USB Serial port"""
+        """Auto-detect active USB Serial port, prioritizing Silicon Labs CP210x / USB Serial devices"""
         ports = serial.tools.list_ports.comports()
         print("Available serial ports:")
         for port in ports:
             print(f"  - {port.device}: {port.description}")
 
-        # Try to find likely ESP32 port (USB Serial Device)
+        # Try to find likely ESP32 port (Silicon Labs CP210x / USB Serial)
         for port in ports:
-            if 'USB' in port.description or 'UART' in port.description or 'CP210' in port.description or 'CH340' in port.description:
-                print(f"Auto-detected: {port.device}")
+            desc_lower = port.description.lower()
+            if 'cp210' in desc_lower or 'silicon labs' in desc_lower:
+                print(f"Auto-detected Silicon Labs CP210x: {port.device}")
+                return port.device
+            if 'usb' in desc_lower or 'uart' in desc_lower or 'ch340' in desc_lower:
+                print(f"Auto-detected USB Serial: {port.device}")
                 return port.device
 
         # If no obvious match, use first available
@@ -84,19 +88,25 @@ class OfflineTelemetryLogger:
             return False
 
     def validate_telemetry(self, data: dict) -> bool:
-        """Validate incoming telemetry data structure"""
-        required_fields = ['packet_id', 'current', 'rssi', 'snr']
-        for field in required_fields:
-            if field not in data:
-                print(f"Validation error: Missing field '{field}'")
-                return False
+        """Validate incoming telemetry data structure with flexible key support"""
+        # Support both primary and legacy field names
+        packet_id = data.get("id") or data.get("packet_id", 0)
+        amps = data.get("amps") or data.get("current", 0.0)
+        volts = data.get("volts") or data.get("voltage", 0.0)
+        rssi = data.get("rssi")
+        snr = data.get("snr")
+
+        if rssi is None or snr is None:
+            print(f"Validation error: Missing required fields (rssi, snr) - got {list(data.keys())}")
+            return False
 
         # Validate data types
         try:
-            int(data['packet_id'])
-            float(data['current'])
-            int(data['rssi'])
-            float(data['snr'])
+            int(packet_id)
+            float(amps)
+            float(volts)
+            int(rssi)
+            float(snr)
         except (ValueError, TypeError) as e:
             print(f"Validation error: Invalid data type - {e}")
             return False
@@ -111,25 +121,34 @@ class OfflineTelemetryLogger:
             if not self.validate_telemetry(data):
                 return
 
+            # Extract fields with fallback to legacy names
+            packet_id = int(data.get("id") or data.get("packet_id", 0))
+            amps = float(data.get("amps") or data.get("current", 0.0))
+            volts = float(data.get("volts") or data.get("voltage", 0.0))
+            watts = float(data.get("watts") or data.get("power", 0.0))
+            speed_h = float(data.get("speed_h") or data.get("speed_hall", 0.0))
+            speed_g = float(data.get("speed_g") or data.get("speed_gps", 0.0))
+            rssi = int(data.get("rssi", -80))
+            snr = float(data.get("snr", 9.0))
+
             # Track packet loss by detecting gaps in packet_id
-            current_packet_id = int(data['packet_id'])
             if self.last_packet_id >= 0:
-                gap = current_packet_id - (self.last_packet_id + 1)
+                gap = packet_id - (self.last_packet_id + 1)
                 if gap > 0:
                     self.packet_loss_count += gap
                     print(f"[{datetime.now().strftime('%H:%M:%S')}] Packet loss detected: {gap} packets missing (total lost: {self.packet_loss_count})")
 
-            self.last_packet_id = current_packet_id
+            self.last_packet_id = packet_id
 
-            # Prepare CSV row
+            # Prepare CSV row with full telemetry data
             timestamp = datetime.now(timezone.utc).isoformat()
-            csv_row = f"{self.session_id},{data['packet_id']},{data['current']},{data['rssi']},{data['snr']},{timestamp}\n"
+            csv_row = f"{timestamp},{packet_id},{volts:.2f},{amps:.2f},{watts:.2f},{speed_h:.2f},{speed_g:.2f},{rssi},{snr:.1f}\n"
 
             # Append to CSV file
             with open(self.csv_file, 'a') as f:
                 f.write(csv_row)
 
-            print(f"[{datetime.now().strftime('%H:%M:%S')}] Logged packet {data['packet_id']} to {self.csv_file}")
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] PKT #{packet_id:<5} | {volts:>5.1f}V | {amps:>5.2f}A | {watts:>6.1f}W | SpdH: {speed_h:>4.1f}mph | GPS: {speed_g:>4.1f}mph | RSSI: {rssi:>4}dBm -> [CSV]")
 
         except json.JSONDecodeError as e:
             print(f"JSON decode error: {e}")
@@ -137,8 +156,8 @@ class OfflineTelemetryLogger:
             print(f"Error processing telemetry: {e}")
 
     def initialize_csv(self):
-        """Create CSV file with header"""
-        header = "session_id,packet_id,current,rssi,snr,timestamp\n"
+        """Create CSV file with header matching cloud schema"""
+        header = "timestamp,id,volts,amps,watts,speed_h,speed_g,rssi,snr\n"
         with open(self.csv_file, 'w') as f:
             f.write(header)
         print(f"Initialized CSV file: {self.csv_file}")
