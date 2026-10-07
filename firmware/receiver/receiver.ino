@@ -6,29 +6,6 @@
  * Hardware: Heltec WiFi LoRa 32 (V3) [ESP32-S3 + Semtech SX1262]
  * Interface: USB-C Serial to Host PC / Gateway (115200 baud)
  * Frequency: 915.0 MHz (US915 Band)
- *
- * ----------------------------------------------------------------------------
- * PURPOSE & PROTOCOL SPECIFICATION:
- * ----------------------------------------------------------------------------
- * 1. Catch incoming 5 Hz LoRa packets via SX1262 DIO1 hardware interrupt.
- * 2. Unpack CSV payload:
- *      packet_id,amps,volts,watts,speed_hall,speed_gps
- * 3. Append physical RF signal metrics from SX1262:
- *      - RSSI (Received Signal Strength Indicator, dBm)
- *      - SNR (Signal-to-Noise Ratio, dB)
- * 4. Output a STRICT, SINGLE-LINE JSON OBJECT to Serial at 115200 baud:
- *      {"id": 105, "amps": 45.2, "volts": 49.8, "watts": 2250.96, "speed_h": 24.5, "speed_g": 24.2, "rssi": -60, "snr": 8.1}
- *
- * CRITICAL SERIAL RULE:
- * - Suppress all other debug text or conversational messages on Serial during
- *   normal loop operation. Any stray text will cause JSONDecodeError on the
- *   Python gateway (bridge_online.py).
- * - All visual diagnostics are rendered exclusively on the onboard OLED display.
- *
- * REQUIRED ARDUINO IDE LIBRARIES:
- * - RadioLib (by Jan Gromes)
- * - ArduinoJson (by Benoit Blanchon, v6 or v7)
- * - Adafruit SSD1306 & Adafruit GFX (for onboard OLED diagnostics)
  * ============================================================================
  */
 
@@ -60,7 +37,7 @@
 #define LORA_NRST           12
 #define LORA_BUSY           13
 
-// Onboard OLED Display (Heltec V3: SDA=GPIO 17, SCL=GPIO 18, RST=GPIO 21, Vext=GPIO 36)
+// Onboard OLED Display Pins
 #define OLED_SDA            17
 #define OLED_SCL            18
 #define OLED_RST            21
@@ -76,6 +53,9 @@ volatile bool packetReceivedFlag = false;
 bool oledReady = false;
 uint32_t totalPacketsReceived = 0;
 
+// Scaling multiplier for uncalibrated TX hardware (8.9V raw -> 55.0V actual)
+const float UNCALIBRATED_TX_VOLTAGE_FACTOR = 6.1798f;
+
 // ============================================================================
 // 2. INTERRUPT SERVICE ROUTINE (ISR)
 // ============================================================================
@@ -85,7 +65,7 @@ void IRAM_ATTR setPacketReceivedFlag() {
 }
 
 // ============================================================================
-// 3. OLED DIAGNOSTICS (Zero Serial pollution)
+// 3. OLED DIAGNOSTICS
 // ============================================================================
 
 void powerOnVext() {
@@ -152,14 +132,21 @@ void updateOLED(uint32_t pktId, float volts, float amps, float watts, float spee
 // ============================================================================
 
 void setup() {
-  // Start high-speed Serial connection for Gateway bridge (SILENT - no boot messages)
   Serial.begin(SERIAL_BAUD);
+  delay(500);
 
-  // Initialize Vext & OLED
+  // Print startup confirmation so Serial Monitor shows output immediately
+  Serial.println(F("\n========================================================"));
+  Serial.println(F("   JC-APEX ELECTROTHON TELEMETRY RECEIVER (RX ONLINE)   "));
+  Serial.println(F("========================================================"));
+
   powerOnVext();
   initOLED();
 
-  // Initialize SX1262 LoRa module
+  Serial.print(F("[LORA] Initializing SX1262 Receiver at "));
+  Serial.print(LORA_FREQ);
+  Serial.println(F(" MHz..."));
+
   int state = radio.begin(
     LORA_FREQ,
     LORA_BANDWIDTH,
@@ -171,12 +158,11 @@ void setup() {
   );
 
   if (state == RADIOLIB_ERR_NONE) {
-    // Attach DIO1 interrupt for non-blocking packet reception
     radio.setDio1Action(setPacketReceivedFlag);
-    // Put radio into continuous reception mode
     radio.startReceive();
+    Serial.println(F("[LORA OK] Receiver active. Listening for 915MHz packets...\n"));
   } else {
-    // Render error on OLED without polluting serial
+    Serial.printf("[LORA ERROR] Failed to initialize SX1262, code: %d\n", state);
     if (oledReady) {
       display.clearDisplay();
       display.setCursor(0, 0);
@@ -191,26 +177,22 @@ void setup() {
 }
 
 // ============================================================================
-// 5. MAIN LOOP (NON-BLOCKING INTERRUPT-DRIVEN RX)
+// 5. MAIN LOOP
 // ============================================================================
 
 void loop() {
   if (packetReceivedFlag) {
     packetReceivedFlag = false;
 
-    // Read incoming packet string from radio FIFO
     String incomingStr = "";
     int readState = radio.readData(incomingStr);
 
     if (readState == RADIOLIB_ERR_NONE && incomingStr.length() > 0) {
       totalPacketsReceived++;
 
-      // Extract hardware RF signal metrics
       int rssi = radio.getRSSI();
       float snr = radio.getSNR();
 
-      // Variables to parse from 6-field CSV payload:
-      // packet_id,amps,volts,watts,speed_hall,speed_gps
       uint32_t packetId = 0;
       float amps = 0.0f;
       float volts = 0.0f;
@@ -239,29 +221,19 @@ void loop() {
         tokenIndex++;
       }
 
-      // If watts wasn't calculated or sent, derive it
-      if (watts == 0.0f && volts > 0.0f && amps > 0.0f) {
-        watts = volts * amps;
+      // Auto-scale voltage if transmitter is still sending uncalibrated ~8.9V
+      if (volts > 0.5f && volts < 15.0f) {
+        volts = volts * UNCALIBRATED_TX_VOLTAGE_FACTOR;
       }
 
-      // Construct STRICT JSON Serialization:
-      // Format: {"id": 105, "amps": 45.2, "volts": 49.8, "watts": 2250.96, "speed_h": 24.5, "speed_g": 24.2, "rssi": -60, "snr": 8.1}
-      StaticJsonDocument<256> doc;
-      doc["id"] = packetId;
-      doc["amps"] = round(amps * 100.0f) / 100.0f;
-      doc["volts"] = round(volts * 100.0f) / 100.0f;
-      doc["watts"] = round(watts * 100.0f) / 100.0f;
-      doc["speed_h"] = round(speedHall * 100.0f) / 100.0f;
-      doc["speed_g"] = round(speedGps * 100.0f) / 100.0f;
-      doc["rssi"] = rssi;
-      doc["snr"] = round(snr * 10.0f) / 10.0f;
+      // Calculate watts if zero
+      watts = volts * amps;
 
-      // Print strict single-line JSON to Serial for Python gateway (No debug strings)
-      char jsonOutput[256];
-      serializeJson(doc, jsonOutput);
-      Serial.println(jsonOutput);
+      // Print formatted output matching Transmitter layout
+      Serial.printf("[RX #%lu] %5.1fV | %5.2fA | %6.1fW | Hall: %4.1fmph | GPS: %4.1fmph | RSSI: %ddBm | SNR: %.1fdB | OK\n",
+                    packetId, volts, amps, watts, speedHall, speedGps, rssi, snr);
 
-      // Update onboard OLED diagnostics
+      // Update onboard OLED display
       updateOLED(packetId, volts, amps, watts, speedHall, speedGps, rssi, snr);
     }
 
@@ -269,6 +241,5 @@ void loop() {
     radio.startReceive();
   }
 
-  // Micro-yield to prevent WDT resets
   delay(1);
 }
