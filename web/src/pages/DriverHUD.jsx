@@ -22,7 +22,10 @@ const COMMANDS = [
 ];
 
 function BigArc({ value, max, color }) {
-  const pct = Math.min(value / max, 1);
+  // Defensive fallback
+  const safeValue = value ?? 0;
+  const safeMax = max ?? 100;
+  const pct = Math.min(safeValue / safeMax, 1);
   const r = 128, cx = 150, cy = 155;
   const toRad = d => ((d - 90) * Math.PI) / 180;
   const arc = (s, e) => {
@@ -73,17 +76,31 @@ export default function DriverHUD() {
   const latestOracle = oracleMessages[0];
   const pitMessages = commsMessages.filter(m => m.from === 'pit');
 
+  // Defensive fallbacks for rapid 5 Hz telemetry updates
+  const safeTelemetry = telemetry ?? {};
+  const safeSpeed = safeTelemetry.speed ?? 0;
+  const safeBattery = safeTelemetry.battery ?? 0;
+  const safeTemp = safeTelemetry.temp ?? 0;
+  const safeVoltage = safeTelemetry.voltage ?? 0;
+  const safeCurrent = safeTelemetry.current ?? 0;
+  const safePower = safeTelemetry.power ?? (safeCurrent * safeVoltage);
+  const safeEfficiency = safeTelemetry.efficiency ?? 0;
+  const safeLap = safeTelemetry.lap ?? 0;
+  const safeRaceTime = safeTelemetry.raceTime ?? 0;
+  const safeSpeedHall = safeTelemetry.speed_hall ?? safeSpeed;
+  const safeSpeedGps = safeTelemetry.speed_gps ?? safeSpeed;
+
   // Broadcast driver status periodically
   useEffect(() => {
     const interval = setInterval(() => {
-      broadcastDriverStatus(telemetry, incomingCommands[0]);
+      broadcastDriverStatus(safeTelemetry, incomingCommands[0]);
     }, 1000);
     return () => clearInterval(interval);
-  }, [telemetry, incomingCommands, broadcastDriverStatus]);
+  }, [safeTelemetry, incomingCommands, broadcastDriverStatus]);
 
-  const battColor = telemetry.battery < 20 ? '#ef4444' : telemetry.battery < 40 ? '#eab308' : '#22c55e';
-  const tempColor = telemetry.temp > 58 ? '#ef4444' : telemetry.temp > 46 ? '#eab308' : '#22d3ee';
-  const speedColor = telemetry.speed > 32 ? '#ef4444' : '#ffffff';
+  const battColor = safeBattery < 20 ? '#FF0033' : safeBattery < 40 ? '#FFD600' : '#00FF66';
+  const tempColor = safeTemp > 58 ? '#FF0033' : safeTemp > 46 ? '#FFD600' : '#22d3ee';
+  const speedColor = safeSpeed > 32 ? '#FF0033' : '#00FF66';
 
   // Time since last packet for signal status
   const timeSinceLastPacket = Math.floor((Date.now() - lastPacketTime) / 1000);
@@ -105,7 +122,7 @@ export default function DriverHUD() {
   };
 
   return (
-    <div className={`h-screen bg-[#080808] flex flex-col overflow-hidden select-none ${focusMode ? 'fullscreen' : ''}`}>
+    <div className={`h-screen bg-[#0B0E14] flex flex-col overflow-hidden select-none ${focusMode ? 'fullscreen' : ''}`}>
       {/* Command Banner Overlay */}
       <AnimatePresence>
         {incomingCommands.length > 0 && incomingCommands[0].status !== COMMAND_STATUS.EXPIRED && (
@@ -177,7 +194,7 @@ export default function DriverHUD() {
 
       {/* Top bar - hidden in focus mode */}
       {!focusMode && (
-        <div className="flex-shrink-0 flex items-center justify-between px-4 h-9 border-b border-white/[0.06] bg-[#0c0c0c]">
+        <div className="flex-shrink-0 flex items-center justify-between px-4 h-9 border-b border-white/[0.06] bg-[#0B0E14]">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
               <div className="w-4 h-4 bg-primary rounded-sm flex items-center justify-center">
@@ -201,9 +218,9 @@ export default function DriverHUD() {
             </AnimatePresence>
           </div>
           <div className="flex items-center gap-4 text-[8px] font-mono">
-            <span className="text-white/25">LAP <span className="text-white/60 font-bold">#{Math.floor(telemetry.lap)}</span></span>
-            <span className="text-white/20">{formatTime(telemetry.raceTime)}</span>
-            <span style={{ color: battColor }} className="font-bold">{telemetry.battery < 40 ? 'CONSERVE' : telemetry.battery > 60 ? 'BALANCED' : 'NOMINAL'}</span>
+            <span className="text-white/25">LAP <span className="text-white/60 font-bold">#{Math.floor(safeLap)}</span></span>
+            <span className="text-white/20">{formatTime(safeRaceTime)}</span>
+            <span style={{ color: battColor }} className="font-bold">{safeBattery < 40 ? 'CONSERVE' : safeBattery > 60 ? 'BALANCED' : 'NOMINAL'}</span>
             <span className="text-white/15">GHOST-LINK™</span>
             {/* Signal Status */}
             <div className="flex items-center gap-1.5" style={{ color: signalColor }}>
@@ -220,7 +237,7 @@ export default function DriverHUD() {
       <div className="flex flex-1 overflow-hidden">
         {/* Left panel - hidden in focus mode */}
         {!focusMode && (
-          <div className="w-44 flex-shrink-0 border-r border-white/[0.06] bg-[#0b0b0b] flex flex-col overflow-y-auto p-3 gap-3">
+          <div className="w-44 flex-shrink-0 border-r border-white/[0.06] bg-[#0B0E14] flex flex-col overflow-y-auto p-3 gap-3">
           {/* Driver Commands */}
           <div>
             <div className="flex items-center gap-1.5 mb-2">
@@ -282,8 +299,8 @@ export default function DriverHUD() {
           <div className="border-t border-white/[0.04] pt-3 space-y-1">
             <div className="text-[7px] font-display font-bold tracking-widest text-white/15 uppercase mb-2">Lap Timing</div>
             {[
-              { label: 'LAPS', value: Math.floor(telemetry.lap), color: '#ef4444' },
-              { label: 'DIST', value: `${(telemetry.lap * 0.25).toFixed(2)} mi`, color: '#60a5fa' },
+              { label: 'LAPS', value: Math.floor(safeLap), color: '#FF0033' },
+              { label: 'DIST', value: `${(safeLap * 0.25).toFixed(2)} mi`, color: '#60a5fa' },
             ].map(s => (
               <div key={s.label} className="flex items-center justify-between text-[8px] font-mono">
                 <span className="text-white/20">{s.label}</span>
@@ -295,7 +312,7 @@ export default function DriverHUD() {
         )}
 
         {/* Center — Speedometer */}
-        <div className={`flex-1 flex flex-col items-center justify-center relative bg-[#080808] ${focusMode ? 'p-8' : ''}`}>
+        <div className={`flex-1 flex flex-col items-center justify-center relative bg-[#0B0E14] ${focusMode ? 'p-8' : ''}`}>
           {/* Target Pace Lightbar */}
           <div className={`w-full max-w-md mb-4 ${focusMode ? 'mb-8' : ''}`}>
             <div className="flex items-center justify-between text-[8px] font-mono text-white/30 mb-1">
@@ -304,8 +321,8 @@ export default function DriverHUD() {
             </div>
             <div className="h-3 bg-white/[0.04] rounded-full overflow-hidden flex">
               <div className="h-full transition-all" style={{ width: '33%', backgroundColor: '#3b82f6' }} />
-              <div className="h-full transition-all" style={{ width: '33%', backgroundColor: '#22c55e' }} />
-              <div className="h-full transition-all" style={{ width: '34%', backgroundColor: '#ef4444' }} />
+              <div className="h-full transition-all" style={{ width: '33%', backgroundColor: '#00FF66' }} />
+              <div className="h-full transition-all" style={{ width: '34%', backgroundColor: '#FF0033' }} />
               {/* Pace indicator */}
               <div 
                 className="absolute h-4 w-0.5 bg-white shadow-lg transition-all"
@@ -318,13 +335,13 @@ export default function DriverHUD() {
           </div>
           {/* Big arc dial */}
           <div className={`relative flex items-center justify-center ${focusMode ? 'scale-125' : ''}`} style={{ width: 300, height: 260 }}>
-            <BigArc value={telemetry.speed} max={40} color={speedColor} />
+            <BigArc value={safeSpeed} max={40} color={speedColor} />
             <div className="relative z-10 text-center mt-6">
               <div className="font-display font-black leading-none" style={{
                 fontSize: focusMode ? 120 : 80, color: speedColor,
-                textShadow: speedColor === '#ef4444' ? '0 0 30px #ef444460' : '0 0 30px rgba(255,255,255,0.15)'
+                textShadow: speedColor === '#FF0033' ? '0 0 30px #FF003360' : '0 0 30px rgba(0,255,102,0.15)'
               }}>
-                {telemetry.speed.toFixed(1)}
+                {safeSpeed.toFixed(1)}
               </div>
               <div className={`font-mono text-white/25 tracking-[0.5em] mt-1 ${focusMode ? 'text-lg' : 'text-[10px]'}`}>MPH</div>
             </div>
@@ -334,11 +351,11 @@ export default function DriverHUD() {
           <div className="w-56 mt-2 mb-5">
             <div className="flex items-center justify-between text-[7px] font-mono text-white/20 mb-1">
               <span>THROTTLE INPUT</span>
-              <span style={{ color: speedColor }}>{telemetry.efficiency.toFixed(0)}%</span>
+              <span style={{ color: speedColor }}>{safeEfficiency.toFixed(0)}%</span>
             </div>
             <div className="h-1.5 bg-white/[0.04] rounded-full overflow-hidden">
               <div className="h-full rounded-full transition-all duration-300"
-                style={{ width: `${telemetry.efficiency}%`, background: 'linear-gradient(90deg, #22c55e 0%, #eab308 60%, #ef4444 100%)' }} />
+                style={{ width: `${safeEfficiency}%`, background: 'linear-gradient(90deg, #00FF66 0%, #FFD600 60%, #FF0033 100%)' }} />
             </div>
           </div>
 
@@ -346,12 +363,12 @@ export default function DriverHUD() {
           {!focusMode ? (
             <div className="flex items-center gap-5 flex-wrap justify-center max-w-xl">
               {[
-                { label: 'BATT',  value: `${telemetry.battery.toFixed(0)}%`, sub: telemetry.battery > 40 ? 'GOOD' : 'LOW', color: battColor },
-                { label: '48V SYSTEM', value: `${telemetry.voltage.toFixed(1)}V`, sub: telemetry.voltage > 44 ? '48V NOMINAL' : '48V SYSTEM', color: '#60a5fa' },
-                { label: 'AMPS',  value: `${telemetry.current.toFixed(1)}A`, sub: 'CURRENT', color: '#22d3ee' },
-                { label: 'MOTOR POWER', value: `${(telemetry.power != null ? telemetry.power : telemetry.current * telemetry.voltage).toFixed(0)}W`, sub: 'WATTS', color: '#a78bfa' },
-                { label: 'HALL SPEED', value: `${(telemetry.speed_hall != null ? telemetry.speed_hall : telemetry.speed).toFixed(1)}`, sub: 'MPH', color: '#ef4444' },
-                { label: 'GPS SPEED', value: `${(telemetry.speed_gps != null ? telemetry.speed_gps : telemetry.speed).toFixed(1)}`, sub: 'MPH', color: '#f59e0b' },
+                { label: 'BATT',  value: `${safeBattery.toFixed(0)}%`, sub: safeBattery > 40 ? 'GOOD' : 'LOW', color: battColor },
+                { label: '48V SYSTEM', value: `${safeVoltage.toFixed(1)}V`, sub: safeVoltage > 44 ? '48V NOMINAL' : '48V SYSTEM', color: '#60a5fa' },
+                { label: 'AMPS',  value: `${safeCurrent.toFixed(1)}A`, sub: 'CURRENT', color: '#22d3ee' },
+                { label: 'MOTOR POWER', value: `${safePower.toFixed(0)}W`, sub: 'WATTS', color: '#a78bfa' },
+                { label: 'HALL SPEED', value: `${safeSpeedHall.toFixed(1)}`, sub: 'MPH', color: '#FF0033' },
+                { label: 'GPS SPEED', value: `${safeSpeedGps.toFixed(1)}`, sub: 'MPH', color: '#FFD600' },
               ].map(m => (
                 <div key={m.label} className="text-center px-1.5">
                   <div className="text-[7px] font-mono text-white/15 tracking-wider mb-0.5">{m.label}</div>
