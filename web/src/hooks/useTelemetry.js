@@ -426,13 +426,13 @@ export function useTelemetry(sessionId = null, enabled = true, options = {}) {
   // Helper Alerts for dashboard compatibility
   const thermalAlert = useMemo(() => ({
     level: telemetry.temp > 58 ? 'critical' : telemetry.temp > 46 ? 'warning' : 'nominal',
-    color: telemetry.temp > 58 ? '#ef4444' : telemetry.temp > 46 ? '#eab308' : '#22c55e',
+    color: telemetry.temp > 58 ? '#FF1E42' : telemetry.temp > 46 ? '#FFB300' : '#10B981',
     flashing: telemetry.temp > 58,
   }), [telemetry.temp]);
 
   const voltageAlert = useMemo(() => ({
     level: (telemetry.voltage < 42.0 && telemetry.voltage > 0) ? 'critical' : (telemetry.voltage < 45.0 && telemetry.voltage > 0) ? 'warning' : 'nominal',
-    color: (telemetry.voltage < 42.0 && telemetry.voltage > 0) ? '#ef4444' : (telemetry.voltage < 45.0 && telemetry.voltage > 0) ? '#eab308' : '#60a5fa',
+    color: (telemetry.voltage < 42.0 && telemetry.voltage > 0) ? '#FF1E42' : (telemetry.voltage < 45.0 && telemetry.voltage > 0) ? '#FFB300' : '#10B981',
     flashing: (telemetry.voltage < 42.0 && telemetry.voltage > 0),
   }), [telemetry.voltage]);
 
@@ -503,7 +503,7 @@ export function useTelemetry(sessionId = null, enabled = true, options = {}) {
     chartData,
     sendCommand,
     formatTime,
-    estimatedLapsRemaining: telemetry?.battery > 0 ? Math.max(1, Math.round((telemetry.battery / 100) * (telemetry.totalLaps || 30))) : 0,
+    estimatedLapsRemaining: 0,
     signalLost: !isLive,
     lastPacketTime: lastUpdate ? lastUpdate.getTime() : 0,
     targetPace: { label: '25 MPH', zone: 'green', color: '#00FF66' },

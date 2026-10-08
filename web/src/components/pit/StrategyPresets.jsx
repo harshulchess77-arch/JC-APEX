@@ -46,7 +46,7 @@ export default function StrategyPresets({ currentMode, onApplyMode }) {
   const remove = async (id) => { try { await base44.entities.StrategyPreset.delete(id); } catch {} load(); };
 
   return (
-    <div className="rounded border border-white/[0.06] bg-[#0e0e0e] p-3">
+    <div className="rounded border border-white/[0.06] bg-[#101217] p-3">
       <div className="flex items-center justify-between mb-2.5">
         <div className="flex items-center gap-2">
           <span className="text-[9px] font-display font-bold tracking-widest text-white/40 uppercase">Strategy Presets</span>

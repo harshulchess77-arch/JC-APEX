@@ -8,20 +8,91 @@ const DEFAULT_THRESHOLDS = [
   { id: 't3', label: 'Voltage Sag Alert',  condition: 'Voltage drops below 38V',   severity: 'critical', active: true },
 ];
 
-const SCENARIO = [
-  { label: 'Battery Drain Rate',  value: '0.8%/min', bar: 8 },
-  { label: 'Avg Lap Speed',       value: '22 mph',   bar: 55 },
-  { label: 'Thermal Load Factor', value: '1x',       bar: 20 },
-  { label: 'System Efficiency',   value: '65%',      bar: 65 },
-  { label: 'Laps Remaining',      value: '15 laps',  bar: 75 },
-];
+// Upgraded predictive algorithms for Battery Discharge, Thermal Load, and Voltage Sag
+const calculatePredictions = (telemetry) => {
+  const safe = telemetry || {};
+  const battery = safe.battery ?? 100;
+  const temp = safe.temp ?? 25;
+  const voltage = safe.voltage ?? 48;
+  const current = safe.current ?? 0;
+  const speed = safe.speed ?? 0;
+  const efficiency = safe.efficiency ?? 95;
+
+  // 1. Dynamic Power and Wh/mi Efficiency
+  // Electrical power in Watts = Voltage * Current
+  // Aerodynamic drag force scales with v^2; thermal derating applies when pack/motor exceeds 45°C
+  const power = Math.max(0, voltage * current);
+  const effectiveSpeed = Math.max(speed, 0.5); // Guard against divide-by-zero
+  const aeroFactor = 1 + Math.pow(Math.max(0, speed - 15) / 20, 1.8) * 0.25;
+  const thermalDerateFactor = temp > 45 ? 1 + ((temp - 45) / 40) * 0.35 : 1.0;
+  const baseWhPerMile = (power / effectiveSpeed) * aeroFactor * thermalDerateFactor;
+
+  // Efficiency weighting: mechanical and inverter efficiency penalty
+  const effNormalized = Math.max(50, Math.min(100, efficiency)) / 100;
+  const weightedWhPerMile = baseWhPerMile * (1 + (1 - effNormalized) * 0.65);
+
+  // 2. Projected battery drain rate (%/min) with Peukert effect
+  // Nominal 48V pack: ~500Wh capacity (~10.4Ah)
+  // Higher C-rates increase internal loss and accelerate effective drain
+  const nominalPackWh = 500;
+  const cRate = current / 10.4;
+  const peukertFactor = Math.pow(Math.max(1, cRate), 0.15);
+  const drainRatePerMin = (power / (nominalPackWh * peukertFactor)) * 100 / 60;
+  const safeDrainRate = Math.max(0.05, drainRatePerMin);
+
+  // 3. Thermal Load Factor (Dynamic Joule heating + ambient delta)
+  // Internal resistance with copper/cell temperature coefficient
+  const internalResistance = 0.045 * (1 + (temp - 25) * 0.004);
+  const jouleHeatingWatts = Math.pow(current, 2) * internalResistance;
+  const ambientTemp = 25.0;
+  const tempDelta = Math.max(0, temp - ambientTemp);
+  const thermalLoad = ((jouleHeatingWatts / 180) * 0.6 + (tempDelta / 45) * 0.4) * (1 / effNormalized);
+
+  // 4. Voltage Sag Prediction under dynamic load
+  // Real-time IR drop = I * R_internal + polarization overpotential
+  // Evaluated relative to 40.0V critical cutoff threshold
+  const irDrop = current * internalResistance;
+  const polarizationSag = (1 - (battery / 100)) * 1.5;
+  const projectedUnderLoadV = Math.max(36, voltage - (irDrop + polarizationSag));
+  const sagMargin = Math.max(0, 48 - projectedUnderLoadV);
+  const voltageSagRisk = (sagMargin / 8.0) * (1 + (temp > 50 ? (temp - 50) / 30 : 0));
+
+  // 5. Time to Critical Cutoff (20% SoC buffer)
+  const usableBatterySoC = Math.max(0, battery - 20);
+  const timeToCriticalMin = safeDrainRate > 0 ? usableBatterySoC / safeDrainRate : 999;
+  const timeToCritical = Math.min(999, Math.max(0, timeToCriticalMin));
+
+  return {
+    batteryDrainRate: safeDrainRate.toFixed(2),
+    avgLapSpeed: speed.toFixed(1),
+    thermalLoadFactor: Math.min(10, thermalLoad).toFixed(1),
+    systemEfficiency: efficiency.toFixed(0),
+    whPerMile: weightedWhPerMile.toFixed(1),
+    timeToCritical: timeToCritical.toFixed(0),
+    voltageSagRisk: Math.min(1.0, voltageSagRisk).toFixed(2)
+  };
+};
 
 export default function OracleTab({ oracleMessages, telemetry }) {
   const [thresholds, setThresholds] = useState(DEFAULT_THRESHOLDS);
   const [autoMode, setAutoMode] = useState(true);
 
+  // Calculate dynamic predictions based on live telemetry
+  const predictions = calculatePredictions(telemetry);
+
+  // Dynamic scenario builder based on predictions
+  const SCENARIO = [
+    { label: 'BATTERY DRAIN', value: `${predictions.batteryDrainRate}%/min`, bar: Math.min(100, parseFloat(predictions.batteryDrainRate) * 15) },
+    { label: 'WH/MI EFFICIENCY', value: `${predictions.whPerMile} Wh/mi`, bar: Math.min(100, parseFloat(predictions.whPerMile) * 1.5) },
+    { label: 'THERMAL LOAD', value: predictions.thermalLoadFactor, bar: Math.min(100, parseFloat(predictions.thermalLoadFactor) * 25) },
+    { label: 'VOLTAGE SAG RISK', value: predictions.voltageSagRisk, bar: Math.min(100, parseFloat(predictions.voltageSagRisk) * 100) },
+    { label: 'TIME TO CUTOFF (20%)', value: `${predictions.timeToCritical} min`, bar: Math.min(100, (parseFloat(predictions.timeToCritical) / 60) * 100) },
+  ];
+
   const toggle = (id) => setThresholds(prev => prev.map(t => t.id === id ? { ...t, active: !t.active } : t));
   const remove = (id) => setThresholds(prev => prev.filter(t => t.id !== id));
+
+  const safeTelemetry = telemetry || {};
 
   return (
     <div className="grid grid-cols-2 gap-3 h-full">
@@ -29,7 +100,7 @@ export default function OracleTab({ oracleMessages, telemetry }) {
       {/* Left — AI Engine */}
       <div className="flex flex-col gap-3">
         {/* Threshold manager */}
-        <div className="rounded border border-white/[0.06] bg-[#0e0e0e] p-3">
+        <div className="rounded border border-white/[0.06] bg-[#101217] p-3">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Cpu className="w-3.5 h-3.5 text-primary" />
@@ -83,14 +154,14 @@ export default function OracleTab({ oracleMessages, telemetry }) {
 
           {/* Telemetry strip */}
           <div className="flex items-center gap-3 pt-2 mt-2 border-t border-white/[0.04] text-[8px] font-mono text-white/20">
-            <span>Batt: <span className="text-green-400">{telemetry.battery.toFixed(1)}%</span></span>
-            <span>Temp: <span className="text-yellow-400">{telemetry.temp.toFixed(1)}°C</span></span>
-            <span>Eff: <span className="text-purple-400">{telemetry.efficiency.toFixed(0)}%</span></span>
+            <span>Batt: <span className="text-green-400">{(safeTelemetry.battery ?? 0).toFixed(1)}%</span></span>
+            <span>Temp: <span className="text-yellow-400">{(safeTelemetry.temp ?? 0).toFixed(1)}°C</span></span>
+            <span>Eff: <span className="text-purple-400">{(safeTelemetry.efficiency ?? 0).toFixed(0)}%</span></span>
           </div>
         </div>
 
         {/* Oracle Core V2 live log */}
-        <div className="rounded border border-white/[0.06] bg-[#0e0e0e] p-3 flex-1">
+        <div className="rounded border border-white/[0.06] bg-[#101217] p-3 flex-1">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Cpu className="w-3.5 h-3.5 text-primary" />
@@ -100,7 +171,7 @@ export default function OracleTab({ oracleMessages, telemetry }) {
           </div>
           <div className="space-y-1.5 max-h-48 overflow-y-auto">
             <AnimatePresence>
-              {oracleMessages.slice(0, 8).map(msg => (
+              {(oracleMessages || []).slice(0, 8).map(msg => (
                 <motion.div key={msg.id} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}
                   className={`text-[9px] font-mono px-2.5 py-1.5 rounded border flex items-start gap-2 ${
                     msg.severity === 'critical' ? 'border-primary/20 bg-primary/5 text-primary' :
@@ -121,7 +192,7 @@ export default function OracleTab({ oracleMessages, telemetry }) {
 
       {/* Right — Scenario Builder */}
       <div className="flex flex-col gap-3">
-        <div className="rounded border border-white/[0.06] bg-[#0e0e0e] p-3">
+        <div className="rounded border border-white/[0.06] bg-[#101217] p-3">
           <div className="flex items-center justify-between mb-3">
             <span className="text-[9px] font-display font-bold tracking-widest text-white/50 uppercase">Scenario Builder</span>
             <span className="text-[7px] font-mono px-1.5 py-0.5 rounded border border-primary/30 text-primary">WHAT IF</span>
@@ -134,7 +205,7 @@ export default function OracleTab({ oracleMessages, telemetry }) {
                   <span className="text-sm font-display font-black text-primary">{s.value}</span>
                 </div>
                 <div className="h-1 bg-white/[0.04] rounded-full overflow-hidden">
-                  <div className="h-full bg-primary rounded-full" style={{ width: `${s.bar}%`, boxShadow: '0 0 6px #ef4444' }} />
+                  <div className="h-full bg-primary rounded-full" style={{ width: `${s.bar}%`, boxShadow: '0 0 6px #FF1E42' }} />
                 </div>
               </div>
             ))}
@@ -145,7 +216,7 @@ export default function OracleTab({ oracleMessages, telemetry }) {
           </div>
         </div>
 
-        <div className="rounded border border-white/[0.06] bg-[#0e0e0e] p-3 flex-1">
+        <div className="rounded border border-white/[0.06] bg-[#101217] p-3 flex-1">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
             <span className="text-[9px] font-display font-bold tracking-widest text-white/50 uppercase">Strategy Advisor</span>

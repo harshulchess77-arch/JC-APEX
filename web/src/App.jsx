@@ -28,7 +28,7 @@ const AuthenticatedApp = () => {
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
-      <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#080808] text-white">
+      <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#08090C] text-white">
         <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4"></div>
         <div className="text-xs font-mono tracking-widest text-white/50 uppercase">INITIALIZING SYSTEM...</div>
       </div>
@@ -37,48 +37,47 @@ const AuthenticatedApp = () => {
 
   return (
     <RaceEngineProvider>
-    <PasscodeAuthProvider>
-    <Routes>
-      {/* ── PUBLIC ROUTES (no auth required) ── */}
-      {/* Root renders the high-level public Landing / Home page */}
-      <Route path="/" element={<Landing />} />
-      <Route path="/login" element={<RoleSelect />} />
-      <Route path="/command-center" element={<Navigate to="/pit" replace />} />
+      <Routes>
+        {/* ── PUBLIC ROUTES (no auth required) ── */}
+        {/* Root renders the high-level public Landing / Home page */}
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={<RoleSelect />} />
+        <Route path="/command-center" element={<Navigate to="/pit" replace />} />
 
-      {/* ── PROTECTED ROUTES (require passcode auth) ── */}
-      <Route element={<PasscodeProtectedRoute />}>
-        <Route path="/pit"                    element={<PitCenter />} />
-        <Route path="/driver"                 element={<DriverHUD />} />
-        <Route path="/director"               element={<RaceDirector />} />
-        <Route path="/drivers"                element={<DriverProfile />} />
-        <Route path="/strategy-library"       element={<StrategyLibrary />} />
-        <Route path="/championship-standings" element={<ChampionshipStandings />} />
-        <Route path="/telemetry-dashboard"    element={<TelemetryDashboard />} />
-        <Route path="/circuit-map"            element={<CircuitMap />} />
-        <Route path="/settings"               element={<AppSettings />} />
-        <Route path="/live-comms"             element={<LiveComms />} />
-        <Route path="/benchmarks"             element={<Benchmarks />} />
-        <Route path="*"                       element={<PageNotFound />} />
-      </Route>
-    </Routes>
-    </PasscodeAuthProvider>
+        {/* ── PROTECTED ROUTES (require passcode auth) ── */}
+        <Route element={<PasscodeProtectedRoute />}>
+          <Route path="/pit"                    element={<PitCenter />} />
+          <Route path="/driver"                 element={<DriverHUD />} />
+          <Route path="/director"               element={<RaceDirector />} />
+          <Route path="/drivers"                element={<DriverProfile />} />
+          <Route path="/strategy-library"       element={<StrategyLibrary />} />
+          <Route path="/championship-standings" element={<ChampionshipStandings />} />
+          <Route path="/telemetry-dashboard"    element={<TelemetryDashboard />} />
+          <Route path="/circuit-map"            element={<CircuitMap />} />
+          <Route path="/settings"               element={<AppSettings />} />
+          <Route path="/live-comms"             element={<LiveComms />} />
+          <Route path="/benchmarks"             element={<Benchmarks />} />
+          <Route path="*"                       element={<PageNotFound />} />
+        </Route>
+      </Routes>
     </RaceEngineProvider>
   );
 };
 
 
 function App() {
-
   return (
     <AuthProvider>
-      <QueryClientProvider client={queryClientInstance}>
-        <Router>
-          <AuthenticatedApp />
-        </Router>
-        <Toaster />
-      </QueryClientProvider>
+      <PasscodeAuthProvider>
+        <QueryClientProvider client={queryClientInstance}>
+          <Router>
+            <AuthenticatedApp />
+          </Router>
+          <Toaster />
+        </QueryClientProvider>
+      </PasscodeAuthProvider>
     </AuthProvider>
-  )
+  );
 }
 
 export default App

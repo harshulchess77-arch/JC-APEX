@@ -32,10 +32,10 @@ export default function PostAnalysisTab({ telemetry, chartData, sessionId, telem
   const dist = (laps * 0.25).toFixed(2);
 
   const HEALTH = [
-    { label: 'Battery System',   value: `${telemetry.battery.toFixed(1)}%`,    pct: telemetry.battery,               color: '#22c55e' },
-    { label: 'Thermal Load',     value: `${telemetry.temp.toFixed(1)}°C`,      pct: (telemetry.temp / 80) * 100,     color: '#eab308' },
-    { label: 'Drive Efficiency', value: `${telemetry.efficiency.toFixed(1)}%`, pct: telemetry.efficiency,            color: '#a78bfa' },
-    { label: 'Voltage Stability',value: `${telemetry.voltage.toFixed(1)}V`,    pct: (telemetry.voltage / 50) * 100, color: '#60a5fa' },
+    { label: 'Battery System',   value: `${telemetry.battery.toFixed(1)}%`,    pct: telemetry.battery,               color: '#10B981' },
+    { label: 'Thermal Headroom', value: `${telemetry.temp.toFixed(1)}°C`,      pct: (telemetry.temp / 80) * 100,     color: '#FFB300' },
+    { label: 'Drive Efficiency', value: `${telemetry.efficiency.toFixed(1)}%`, pct: telemetry.efficiency,            color: '#10B981' },
+    { label: 'Voltage Stability',value: `${telemetry.voltage.toFixed(1)}V`,    pct: (telemetry.voltage / 50) * 100, color: '#FF1E42' },
   ];
 
   return (
@@ -45,21 +45,21 @@ export default function PostAnalysisTab({ telemetry, chartData, sessionId, telem
         {/* Summary */}
         <div className="grid grid-cols-2 gap-2">
           {[
-            { label: 'LAPS',       value: laps,          color: '#ef4444' },
-            { label: 'PEAK SPEED', value: `${peakSpeed} mph`, color: '#ef4444' },
-            { label: 'LAST BATT',  value: `${telemetry.battery.toFixed(1)}%`, color: '#22c55e' },
-            { label: 'AVG EFF',    value: `${avgEff}%`,  color: '#a78bfa' },
-            { label: 'DISTANCE',   value: `${dist} mi`,  color: '#60a5fa' },
+            { label: 'COMPLETED LAPS', value: laps,          color: '#FF1E42' },
+            { label: 'PEAK SPEED',     value: `${peakSpeed} mph`, color: '#FF1E42' },
+            { label: 'BATTERY STATE',  value: `${telemetry.battery.toFixed(1)}%`, color: '#10B981' },
+            { label: 'AVG EFFICIENCY', value: `${avgEff}%`,  color: '#10B981' },
+            { label: 'TOTAL DISTANCE', value: `${dist} mi`,  color: '#FF1E42' },
           ].map(s => (
-            <div key={s.label} className="rounded border border-white/[0.06] bg-[#0e0e0e] p-3 text-center">
-              <div className="text-[7px] font-mono tracking-widest text-white/20 uppercase mb-1">{s.label}</div>
+            <div key={s.label} className="rounded border border-white/[0.06] bg-[#101217] p-3 text-center">
+              <div className="text-[7px] font-mono tracking-widest text-white/30 uppercase mb-1">{s.label}</div>
               <div className="text-lg font-display font-black" style={{ color: s.color }}>{s.value}</div>
             </div>
           ))}
         </div>
 
         {/* Lap Breakdown */}
-        <div className="rounded border border-white/[0.06] bg-[#0e0e0e] p-3 flex-1">
+        <div className="rounded border border-white/[0.06] bg-[#101217] p-3 flex-1">
           <div className="flex items-center gap-2 mb-3">
             <BarChart3 className="w-3.5 h-3.5 text-primary" />
             <span className="text-[9px] font-display font-bold tracking-widest text-white/50 uppercase">Lap-by-Lap Breakdown</span>
@@ -75,11 +75,11 @@ export default function PostAnalysisTab({ telemetry, chartData, sessionId, telem
                 const w = 60 + (i % 3) * 10;
                 return (
                   <div key={i} className="flex items-center gap-3">
-                    <span className="text-[8px] font-mono text-white/25 w-6">L1</span>
+                    <span className="text-[8px] font-mono text-white/30 w-6">L{i + 1}</span>
                     <div className="flex-1 h-1.5 bg-white/[0.04] rounded-full overflow-hidden">
                       <div className="h-full bg-primary rounded-full" style={{ width: `${w}%` }} />
                     </div>
-                    <span className="text-[8px] font-mono text-white/30 w-12 text-right">{(3 + (i % 4) * 0.5).toFixed(2)}m</span>
+                    <span className="text-[8px] font-mono text-white/40 w-12 text-right">{(3 + (i % 4) * 0.5).toFixed(2)}m</span>
                   </div>
                 );
               })}
@@ -90,7 +90,7 @@ export default function PostAnalysisTab({ telemetry, chartData, sessionId, telem
 
       {/* Right */}
       <div className="flex flex-col gap-3">
-        <div className="rounded border border-white/[0.06] bg-[#0e0e0e] p-3">
+        <div className="rounded border border-white/[0.06] bg-[#101217] p-3">
           <span className="text-[9px] font-display font-bold tracking-widest text-white/50 uppercase block mb-3">System Health Report</span>
           {HEALTH.map(h => (
             <div key={h.label} className="mb-3">
@@ -105,32 +105,32 @@ export default function PostAnalysisTab({ telemetry, chartData, sessionId, telem
           ))}
         </div>
 
-        <div className="rounded border border-white/[0.06] bg-[#0e0e0e] p-3">
+        <div className="rounded border border-white/[0.06] bg-[#101217] p-3">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[9px] font-display font-bold tracking-widest text-yellow-500/70 uppercase">Oracle Assessment</span>
-            <span className="text-[7px] font-mono px-1.5 py-0.5 rounded border border-green-500/25 text-green-400">● LIVE</span>
+            <span className="text-[9px] font-display font-bold tracking-widest text-[#FFB300]/80 uppercase">Oracle Assessment</span>
+            <span className="text-[7px] font-mono px-1.5 py-0.5 rounded border border-[#10B981]/30 text-[#10B981]">● LIVE</span>
           </div>
-          <p className="text-[9px] font-mono text-white/30">Analyzing telemetry data...</p>
+          <p className="text-[9px] font-mono text-white/40">Analyzing telemetry stream data...</p>
         </div>
 
-        <div className="rounded border border-white/[0.06] bg-[#0e0e0e] p-3">
+        <div className="rounded border border-white/[0.06] bg-[#101217] p-3">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Download className="w-3.5 h-3.5 text-white/30" />
+              <Download className="w-3.5 h-3.5 text-white/40" />
               <span className="text-[9px] font-display font-bold tracking-widest text-white/40 uppercase">Export Report</span>
             </div>
-            <span className="text-[7px] font-mono text-white/15">PDF · KPI · LOGS</span>
+            <span className="text-[7px] font-mono text-white/20">PDF · KPI · LOGS</span>
           </div>
           <button
             onClick={handleExportPDF}
             disabled={exporting}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded border border-primary/35 bg-primary/8 text-primary font-display font-black text-xs tracking-widest hover:bg-primary/15 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 py-3 rounded border border-primary/35 bg-primary/10 text-primary font-display font-black text-xs tracking-widest hover:bg-primary/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             <FileText className="w-3.5 h-3.5" />
             {exporting ? 'GENERATING REPORT...' : 'EXPORT LUXURY PDF REPORT'}
           </button>
           {exportedMsg && (
-            <div className="mt-2 flex items-center justify-center gap-1.5 text-[8px] font-mono text-green-400">
+            <div className="mt-2 flex items-center justify-center gap-1.5 text-[8px] font-mono text-[#10B981]">
               <CheckCircle2 className="w-3 h-3" />
               <span>Downloaded {exportedMsg}</span>
             </div>

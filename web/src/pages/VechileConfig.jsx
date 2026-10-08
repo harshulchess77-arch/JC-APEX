@@ -18,7 +18,7 @@ function Field({ label, value, onChange, placeholder = '', type = 'text', unit =
     <div>
       <label className="block text-[8px] font-mono tracking-widest text-white/25 uppercase mb-1">{label}{unit && <span className="text-white/15 ml-1">({unit})</span>}</label>
       <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-        className="w-full px-3 py-2 rounded border border-white/[0.06] bg-[#111] text-white/70 font-mono text-xs focus:outline-none focus:border-primary/30 transition-colors placeholder:text-white/10" />
+        className="w-full px-3 py-2 rounded border border-white/[0.06] bg-[#08090C] text-white/70 font-mono text-xs focus:outline-none focus:border-primary/30 transition-colors placeholder:text-white/10" />
     </div>
   );
 }
@@ -119,8 +119,8 @@ export default function VehicleConfig() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#080808] flex flex-col">
-      <header className="flex items-center justify-between px-5 h-11 border-b border-white/[0.06] bg-[#0c0c0c] flex-shrink-0">
+    <div className="min-h-screen bg-[#08090C] flex flex-col">
+      <header className="flex items-center justify-between px-5 h-11 border-b border-white/[0.06] bg-[#101217] flex-shrink-0">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate('/pit')} className="text-white/20 hover:text-white/60 transition-colors">
             <ArrowLeft className="w-4 h-4" />
@@ -138,8 +138,8 @@ export default function VehicleConfig() {
       <div className="flex-1 overflow-auto p-5">
         <div className="max-w-3xl mx-auto space-y-6">
           {SECTIONS.map(sec => (
-            <div key={sec.title} className="rounded border border-white/[0.06] bg-[#0e0e0e] overflow-hidden">
-              <div className="px-4 py-2.5 border-b border-white/[0.06] bg-[#0b0b0b]">
+            <div key={sec.title} className="rounded border border-white/[0.06] bg-[#101217] overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-white/[0.06] bg-white/[0.02]">
                 <span className="text-[9px] font-display font-bold tracking-[0.2em] text-white/40 uppercase">{sec.title}</span>
               </div>
               <div className={`p-4 grid gap-4 ${sec.fields.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
@@ -151,14 +151,14 @@ export default function VehicleConfig() {
           ))}
 
           {/* Notes */}
-          <div className="rounded border border-white/[0.06] bg-[#0e0e0e] overflow-hidden">
-            <div className="px-4 py-2.5 border-b border-white/[0.06] bg-[#0b0b0b]">
+          <div className="rounded border border-white/[0.06] bg-[#101217] overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-white/[0.06] bg-white/[0.02]">
               <span className="text-[9px] font-display font-bold tracking-[0.2em] text-white/40 uppercase">SETUP NOTES</span>
             </div>
             <div className="p-4">
               <textarea value={form.notes} onChange={e => set('notes')(e.target.value)} rows={4}
                 placeholder="Track observations, special configurations, engineer notes..."
-                className="w-full px-3 py-2.5 rounded border border-white/[0.06] bg-[#111] text-white/70 font-mono text-xs resize-none focus:outline-none focus:border-primary/30 placeholder:text-white/10" />
+                className="w-full px-3 py-2.5 rounded border border-white/[0.06] bg-[#08090C] text-white/70 font-mono text-xs resize-none focus:outline-none focus:border-primary/30 placeholder:text-white/10" />
             </div>
           </div>
         </div>

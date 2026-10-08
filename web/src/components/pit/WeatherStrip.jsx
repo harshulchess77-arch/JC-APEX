@@ -13,15 +13,15 @@ export default function WeatherStrip() {
     return () => clearInterval(i);
   }, []);
 
-  const rainClr = rainProb > 60 ? '#3b82f6' : rainProb > 30 ? '#eab308' : '#22c55e';
-  const tempClr = trackTemp > 45 ? '#ef4444' : trackTemp > 30 ? '#eab308' : '#60a5fa';
-  const risk = rainProb > 60 ? 'HIGH RAIN RISK' : rainProb > 30 ? 'WATCH RAIN' : 'STABLE';
+  const rainClr = rainProb > 60 ? '#FF1E42' : rainProb > 30 ? '#FFB300' : '#10B981';
+  const tempClr = trackTemp > 45 ? '#FF1E42' : trackTemp > 30 ? '#FFB300' : '#10B981';
+  const risk = rainProb > 60 ? 'HIGH RAIN RISK' : rainProb > 30 ? 'WATCH RAIN' : 'OPTIMAL DRY';
 
   return (
     <div className="p-3 border-b border-white/[0.06]">
       <div className="flex items-center gap-1.5 mb-2">
-        <CloudRain className="w-2.5 h-2.5 text-blue-400" />
-        <span className="text-[8px] font-mono tracking-widest text-white/20 uppercase">Weather · Strategy</span>
+        <CloudRain className="w-2.5 h-2.5 text-primary" />
+        <span className="text-[8px] font-mono tracking-widest text-white/30 uppercase">Weather · Track Temp</span>
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded border border-white/[0.06] bg-white/[0.02] p-2">
@@ -39,10 +39,10 @@ export default function WeatherStrip() {
           <div className="text-base font-display font-black" style={{ color: rainClr }}>{rainProb}%</div>
         </div>
       </div>
-      <div className="mt-1.5 h-1 bg-white/[0.04] rounded-full overflow-hidden">
-        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${rainProb}%`, backgroundColor: rainClr }} />
+      <div className="mt-1.5 flex items-center justify-between text-[7px] font-mono text-white/20">
+        <span>CONDITIONS:</span>
+        <span className="font-bold tracking-wider" style={{ color: rainClr }}>{risk}</span>
       </div>
-      <div className="mt-1 text-[7px] font-mono tracking-widest" style={{ color: rainClr }}>{risk}</div>
     </div>
   );
 }

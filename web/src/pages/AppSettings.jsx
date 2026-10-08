@@ -53,8 +53,8 @@ export default function AppSettings() {
   const save = () => { setSaved(true); setTimeout(() => setSaved(false), 2000); };
 
   return (
-    <div className="min-h-screen bg-[#080808] flex flex-col">
-      <header className="flex items-center justify-between px-5 h-11 border-b border-white/[0.06] bg-[#0c0c0c] flex-shrink-0">
+    <div className="min-h-screen bg-[#08090C] flex flex-col">
+      <header className="flex items-center justify-between px-5 h-11 border-b border-white/[0.06] bg-[#101217] flex-shrink-0">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate('/pit')} className="text-white/20 hover:text-white/60 transition-colors">
             <ArrowLeft className="w-4 h-4" />
@@ -72,8 +72,8 @@ export default function AppSettings() {
       <div className="flex-1 overflow-auto p-5">
         <div className="max-w-2xl mx-auto space-y-5">
           {SECTIONS.map(sec => (
-            <div key={sec.title} className="rounded border border-white/[0.06] bg-[#0e0e0e] overflow-hidden">
-              <div className="px-4 py-2.5 border-b border-white/[0.06] bg-[#0b0b0b]">
+            <div key={sec.title} className="rounded border border-white/[0.06] bg-[#101217] overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-white/[0.06] bg-white/[0.02]">
                 <span className="text-[9px] font-display font-bold tracking-[0.2em] text-white/35 uppercase">{sec.title}</span>
               </div>
               <div className="divide-y divide-white/[0.03]">
@@ -88,21 +88,21 @@ export default function AppSettings() {
                       </button>
                     ) : f.type === 'select' ? (
                       <select value={values[f.key]} onChange={e => set(f.key, e.target.value)}
-                        className="px-2.5 py-1.5 rounded border border-white/[0.06] bg-[#111] text-white/60 font-mono text-xs focus:outline-none focus:border-primary/30">
+                        className="px-2.5 py-1.5 rounded border border-white/[0.06] bg-[#08090C] text-white/60 font-mono text-xs focus:outline-none focus:border-primary/30">
                         {f.options.map(o => <option key={o} value={o}>{o}</option>)}
                       </select>
                     ) : f.type === 'password' ? (
                       <div className="flex items-center gap-1">
                         <input type={showPwd ? 'text' : 'password'} value={values[f.key]}
                           onChange={e => set(f.key, e.target.value)} placeholder={f.placeholder}
-                          className="px-2.5 py-1.5 w-52 rounded border border-white/[0.06] bg-[#111] text-white/60 font-mono text-xs focus:outline-none focus:border-primary/30 placeholder:text-white/10" />
+                          className="px-2.5 py-1.5 w-52 rounded border border-white/[0.06] bg-[#08090C] text-white/60 font-mono text-xs focus:outline-none focus:border-primary/30 placeholder:text-white/10" />
                         <button onClick={() => setShowPwd(v => !v)} className="text-white/20 hover:text-white/50 transition-colors p-1">
                           {showPwd ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                         </button>
                       </div>
                     ) : (
                       <input type="text" value={values[f.key]} onChange={e => set(f.key, e.target.value)} placeholder={f.placeholder}
-                        className="px-2.5 py-1.5 w-52 rounded border border-white/[0.06] bg-[#111] text-white/60 font-mono text-xs focus:outline-none focus:border-primary/30 placeholder:text-white/10" />
+                        className="px-2.5 py-1.5 w-52 rounded border border-white/[0.06] bg-[#08090C] text-white/60 font-mono text-xs focus:outline-none focus:border-primary/30 placeholder:text-white/10" />
                     )}
                   </div>
                 ))}

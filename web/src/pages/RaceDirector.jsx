@@ -16,8 +16,8 @@ const FLAG_STYLES = {
 };
 
 function MiniChart({ data, dataKey, color }) {
-  const colorHex = { red: '#ef4444', green: '#22c55e', yellow: '#eab308', blue: '#60a5fa', white: '#f5f5f5' };
-  const hex = colorHex[color] || '#ef4444';
+  const colorHex = { red: '#FF1E42', green: '#10B981', yellow: '#FFB300', blue: '#FF1E42', white: '#f5f5f5' };
+  const hex = colorHex[color] || '#FF1E42';
   return (
     <ResponsiveContainer width="100%" height={60}>
       <AreaChart data={data.slice(-40)}>
@@ -35,8 +35,8 @@ function MiniChart({ data, dataKey, color }) {
 
 function StatusCard({ label, value, unit, color, trend, chart, data, dataKey }) {
   const colorMap = {
-    green: 'text-green-500', yellow: 'text-yellow-500', red: 'text-primary',
-    blue: 'text-blue-400', white: 'text-foreground',
+    green: 'text-[#10B981]', yellow: 'text-[#FFB300]', red: 'text-[#FF1E42]',
+    blue: 'text-[#FF1E42]', white: 'text-foreground',
   };
   return (
     <div className="rounded border border-border bg-card/30 p-4 space-y-2">
@@ -220,7 +220,7 @@ export default function RaceDirector() {
                   TARGET 25 MPH
                 </button>
                 <button onClick={() => handleSendCommand('PUSH HARD')}
-                  className="py-2 rounded text-[9px] font-display font-bold tracking-wider transition-all bg-blue-500/10 border border-blue-500/30 text-blue-500 hover:bg-blue-500/20">
+                  className="py-2 rounded text-[9px] font-display font-bold tracking-wider transition-all bg-[#FF1E42]/10 border border-[#FF1E42]/30 text-[#FF1E42] hover:bg-[#FF1E42]/20">
                   PUSH HARD
                 </button>
               </div>

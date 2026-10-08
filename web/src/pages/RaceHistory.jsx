@@ -73,8 +73,8 @@ export default function RaceHistory() {
   const [expanded, setExpanded] = useState(null);
 
   return (
-    <div className="min-h-screen bg-[#080808] flex flex-col">
-      <header className="flex items-center justify-between px-5 h-11 border-b border-white/[0.06] bg-[#0c0c0c] flex-shrink-0">
+    <div className="min-h-screen bg-[#08090C] flex flex-col">
+      <header className="flex items-center justify-between px-5 h-11 border-b border-white/[0.06] bg-[#101217] flex-shrink-0">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate('/pit')} className="text-white/20 hover:text-white/60 transition-colors">
             <ArrowLeft className="w-4 h-4" />
@@ -100,7 +100,7 @@ export default function RaceHistory() {
       <div className="flex-1 overflow-auto p-4 max-w-4xl mx-auto w-full">
         <div className="space-y-2">
           {SESSIONS.map(s => (
-            <div key={s.id} className="rounded border border-white/[0.06] bg-[#0e0e0e] overflow-hidden">
+            <div key={s.id} className="rounded border border-white/[0.06] bg-[#101217] overflow-hidden">
               {/* Row */}
               <button onClick={() => setExpanded(expanded === s.id ? null : s.id)}
                 className="w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-white/[0.02] transition-colors">
@@ -133,10 +133,10 @@ export default function RaceHistory() {
                     <div className="text-[8px] font-mono tracking-widest text-white/20 mb-2">SESSION SUMMARY</div>
                     <div className="grid grid-cols-2 gap-2">
                       {[
-                        { label: 'Peak Speed', value: `${s.peak_speed} mph`, color: '#ef4444' },
+                        { label: 'Peak Speed', value: `${s.peak_speed} mph`, color: '#FF1E42' },
                         { label: 'Incidents',  value: s.incidents, color: s.incidents > 0 ? '#eab308' : '#22c55e' },
                       ].map(m => (
-                        <div key={m.label} className="bg-[#111] rounded p-2.5">
+                        <div key={m.label} className="bg-[#08090C] rounded p-2.5">
                           <div className="text-[7px] font-mono text-white/20 mb-0.5">{m.label}</div>
                           <div className="text-base font-display font-black" style={{ color: m.color }}>{m.value}</div>
                         </div>
@@ -145,7 +145,7 @@ export default function RaceHistory() {
                   </div>
                   <div>
                     <div className="text-[8px] font-mono tracking-widest text-white/20 mb-2">ORACLE ASSESSMENT</div>
-                    <div className="bg-[#111] rounded p-3 text-[9px] font-mono text-white/50 leading-relaxed border-l-2 border-primary/30">
+                    <div className="bg-[#08090C] rounded p-3 text-[9px] font-mono text-white/50 leading-relaxed border-l-2 border-primary/30">
                       {s.oracle}
                     </div>
                   </div>

@@ -39,7 +39,7 @@ export default function TireFuelPresets() {
   const remove = async (id) => { try { await base44.entities.StrategyPreset.delete(id); } catch {} load(); };
 
   return (
-    <div className="rounded border border-white/[0.06] bg-[#0e0e0e] p-4">
+    <div className="rounded border border-white/[0.06] bg-[#101217] p-4">
       <div className="flex items-center justify-between mb-3">
         <span className="text-[9px] font-display font-bold tracking-widest text-white/40 uppercase">Tire &amp; Fuel Presets</span>
         <button onClick={() => setShowForm(v => !v)}
@@ -54,7 +54,7 @@ export default function TireFuelPresets() {
             <div>
               <label className="block text-[7px] font-mono text-white/20 mb-1 tracking-widest uppercase">Preset Name</label>
               <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Soft Slicks + Lean Fuel"
-                className="w-full px-2.5 py-1.5 rounded border border-white/[0.06] bg-[#111] text-white/60 font-mono text-xs focus:outline-none focus:border-primary/30 placeholder:text-white/10" />
+                className="w-full px-2.5 py-1.5 rounded border border-white/[0.06] bg-[#08090C] text-white/60 font-mono text-xs focus:outline-none focus:border-primary/30 placeholder:text-white/10" />
             </div>
             <div>
               <label className="block text-[7px] font-mono text-white/20 mb-1 tracking-widest uppercase">Strategy Mode</label>

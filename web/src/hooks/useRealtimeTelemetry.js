@@ -49,6 +49,7 @@ export function useRealtimeTelemetry(role = 'driver') {
   const [incomingCommands, setIncomingCommands] = useState([]);
   const [commandHistory, setCommandHistory] = useState([]);
   const [driverTelemetry, setDriverTelemetry] = useState(null);
+  const [driverStrategyMode, setDriverStrategyMode] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   
   const socketRef = useRef(null);
@@ -72,6 +73,15 @@ export function useRealtimeTelemetry(role = 'driver') {
 
   const trySupabaseConnection = async () => {
     try {
+      // Query active flag from database on mount
+      if (supabase?.from) {
+        supabase.from('race_flags').select('active_flag').eq('id', 1).single().then(({ data }) => {
+          if (data?.active_flag) {
+            setDriverTelemetry(prev => ({ ...prev, flag: data.active_flag.toLowerCase() }));
+          }
+        }).catch(() => {});
+      }
+
       const channel = supabase.channel('race_control', {
         config: {
           broadcast: { self: true },
@@ -82,18 +92,21 @@ export function useRealtimeTelemetry(role = 'driver') {
       // Subscribe to broadcast events
       channel
         .on('broadcast', { event: 'pit_command' }, (payload) => {
-          if (role === 'driver') {
-            handleIncomingCommand(payload.data);
+          const data = payload?.payload || payload?.data || payload;
+          if (role === 'driver' && data) {
+            handleIncomingCommand(data);
           }
         })
         .on('broadcast', { event: 'director_command' }, (payload) => {
-          if (role === 'driver') {
-            handleIncomingCommand(payload.data);
+          const data = payload?.payload || payload?.data || payload;
+          if (role === 'driver' && data) {
+            handleIncomingCommand(data);
           }
         })
         .on('broadcast', { event: 'driver_ack' }, (payload) => {
-          if (role === 'pit' || role === 'director') {
-            handleDriverAck(payload.data);
+          const data = payload?.payload || payload?.data || payload;
+          if ((role === 'pit' || role === 'director') && data) {
+            handleDriverAck(data);
           }
         })
         .on('broadcast', { event: 'driver_status' }, (payload) => {
@@ -106,19 +119,56 @@ export function useRealtimeTelemetry(role = 'driver') {
           }
         })
         .on('broadcast', { event: 'flag_change' }, (payload) => {
-          if (role === 'driver') {
-            if (payload?.payload?.flag) {
-              setDriverTelemetry(prev => ({ ...prev, flag: payload.payload.flag }));
-            }
+          const flagData = payload?.payload?.flag || payload?.data?.flag || payload?.flag;
+          if (flagData) {
+            setDriverTelemetry(prev => ({ ...prev, flag: String(flagData).toLowerCase() }));
           }
         })
-        .subscribe((status) => {
-          if (status === 'SUBSCRIBED') {
-            console.log('Supabase Realtime connected');
-            setConnectionMode('supabase');
-            channelRef.current = channel;
+        .on('broadcast', { event: 'strategy_change' }, (payload) => {
+          const modeData = payload?.payload?.mode || payload?.data?.mode || payload?.mode;
+          if (modeData) {
+            setDriverStrategyMode(String(modeData).toUpperCase());
           }
         });
+
+      // Listen to Supabase table changes if enabled
+      if (supabase?.channel) {
+        channel
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'commands' }, (payload) => {
+            if (payload.new && role === 'driver') {
+              handleIncomingCommand({
+                id: payload.new.id,
+                sender: 'PIT',
+                type: payload.new.command_name,
+                payload: payload.new.command_name,
+                status: payload.new.status,
+                timestamp: new Date(payload.new.created_at).getTime(),
+              });
+            }
+          })
+          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'commands' }, (payload) => {
+            if (payload.new && payload.new.status === 'ACKNOWLEDGED') {
+              handleDriverAck({
+                commandId: payload.new.id,
+                commandText: payload.new.command_name,
+                timestamp: new Date(payload.new.acknowledged_at || Date.now()).getTime(),
+              });
+            }
+          })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'race_flags' }, (payload) => {
+            if (payload.new && payload.new.active_flag) {
+              setDriverTelemetry(prev => ({ ...prev, flag: payload.new.active_flag.toLowerCase() }));
+            }
+          });
+      }
+
+      channel.subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('Supabase Realtime connected');
+          setConnectionMode('supabase');
+          channelRef.current = channel;
+        }
+      });
     } catch (error) {
       console.error('Supabase connection failed:', error);
       setConnectionMode('mock');
@@ -126,14 +176,27 @@ export function useRealtimeTelemetry(role = 'driver') {
   };
 
   const handleIncomingCommand = useCallback((commandData) => {
-    setIncomingCommands(prev => [...prev, { ...commandData, status: COMMAND_STATUS.DELIVERED }]);
+    if (!commandData) return;
+    const normalized = {
+      ...commandData,
+      id: commandData.id || `cmd_${Date.now()}`,
+      payload: commandData.payload || commandData.commandText || commandData.command_name || commandData.text || commandData.type,
+      sender: commandData.sender || 'PIT',
+      status: COMMAND_STATUS.DELIVERED,
+    };
+
+    setIncomingCommands(prev => {
+      // Avoid duplicate commands by id
+      if (prev.some(c => c.id === normalized.id)) return prev;
+      return [normalized, ...prev];
+    });
     
     // Auto-expire commands after 30 seconds if not acknowledged
-    if (commandData.ackRequired) {
+    if (commandData.ackRequired !== false) {
       commandTimeoutRef.current = setTimeout(() => {
         setIncomingCommands(prev => 
           prev.map(cmd => 
-            cmd.id === commandData.id ? { ...cmd, status: COMMAND_STATUS.EXPIRED } : cmd
+            cmd.id === normalized.id ? { ...cmd, status: COMMAND_STATUS.EXPIRED } : cmd
           )
         );
       }, 30000);
@@ -141,18 +204,20 @@ export function useRealtimeTelemetry(role = 'driver') {
   }, []);
 
   const handleDriverAck = useCallback((ackData) => {
-    if (!ackData || !ackData.commandId) {
+    if (!ackData || (!ackData.commandId && !ackData.commandText)) {
       console.error('[handleDriverAck] Invalid ackData:', ackData);
       return;
     }
 
     try {
       setCommandHistory(prev =>
-        prev.map(cmd =>
-          cmd.id === ackData.commandId
-            ? { ...cmd, status: COMMAND_STATUS.ACKNOWLEDGED, ackedAt: ackData.timestamp }
-            : cmd
-        )
+        prev.map(cmd => {
+          const match = (ackData.commandId && cmd.id === ackData.commandId) ||
+                        (ackData.commandText && (cmd.payload === ackData.commandText || cmd.type === ackData.commandText));
+          return match
+            ? { ...cmd, status: COMMAND_STATUS.ACKNOWLEDGED, ackedAt: ackData.timestamp || Date.now() }
+            : cmd;
+        })
       );
     } catch (error) {
       console.error('[handleDriverAck] Error updating command history:', error);
@@ -162,9 +227,19 @@ export function useRealtimeTelemetry(role = 'driver') {
   // Send command (for pit/director)
   const sendCommand = useCallback((type, payload) => {
     const sender = role === 'pit' ? 'PIT' : 'DIRECTOR';
-    const command = createDownlinkMessage(sender, type, payload, true);
+    const commandText = payload || type;
+    const command = createDownlinkMessage(sender, type, commandText, true);
 
     setCommandHistory(prev => [...prev, { ...command, status: COMMAND_STATUS.SENT }]);
+
+    // Persist to Supabase commands table
+    if (supabase?.from) {
+      supabase.from('commands').insert({
+        session_id: 'race-session-48v',
+        command_name: commandText,
+        status: 'PENDING',
+      }).then(() => {}).catch(err => console.debug('[sendCommand] Supabase insert note:', err?.message));
+    }
 
     if (connectionMode === 'websocket' && socketRef.current) {
       try {
@@ -192,20 +267,36 @@ export function useRealtimeTelemetry(role = 'driver') {
   }, [role, connectionMode]);
 
   // Send acknowledgment (for driver)
-  const sendAck = useCallback((commandId) => {
-    if (!commandId) {
-      console.error('[sendAck] Invalid commandId:', commandId);
+  const sendAck = useCallback((commandId, commandText) => {
+    if (!commandId && !commandText) {
+      console.error('[sendAck] Invalid ack target:', { commandId, commandText });
       return;
     }
 
     const ack = {
-      commandId,
+      commandId: commandId || `ack_${Date.now()}`,
+      commandText: commandText || '',
       status: COMMAND_STATUS.ACKNOWLEDGED,
       timestamp: Date.now(),
     };
 
-    // Remove from incoming commands
-    setIncomingCommands(prev => prev.filter(cmd => cmd.id !== commandId));
+    // Remove from incoming commands queue immediately
+    setIncomingCommands(prev => prev.filter(cmd => (commandId && cmd.id !== commandId) || (commandText && cmd.payload !== commandText)));
+
+    // Persist acknowledgment to Supabase commands table
+    if (supabase?.from) {
+      const updateData = {
+        status: 'ACKNOWLEDGED',
+        acknowledged_at: new Date().toISOString(),
+      };
+      if (typeof commandId === 'number' || /^\d+$/.test(String(commandId))) {
+        supabase.from('commands').update(updateData).eq('id', Number(commandId)).then(() => {}).catch(() => {});
+      } else if (commandText) {
+        supabase.from('commands').update(updateData).eq('command_name', commandText).then(() => {}).catch(() => {});
+      } else {
+        supabase.from('commands').update(updateData).order('created_at', { ascending: false }).limit(1).then(() => {}).catch(() => {});
+      }
+    }
 
     if (connectionMode === 'websocket' && socketRef.current) {
       try {
@@ -245,18 +336,44 @@ export function useRealtimeTelemetry(role = 'driver') {
 
   // Broadcast flag change (for pit/director)
   const broadcastFlagChange = useCallback((flag) => {
+    const flagUpper = String(flag).toUpperCase();
+    if (supabase?.from) {
+      supabase.from('race_flags').update({
+        active_flag: flagUpper,
+        updated_at: new Date().toISOString(),
+      }).eq('id', 1).then(() => {}).catch(err => console.debug('[broadcastFlagChange] DB note:', err?.message));
+    }
+
     if (connectionMode === 'supabase' && channelRef.current) {
       try {
         channelRef.current.send({
           type: 'broadcast',
           event: 'flag_change',
-          payload: { flag },
+          payload: { flag: flagUpper },
         });
       } catch (error) {
         console.error('[broadcastFlagChange] Supabase send error:', error);
       }
     } else {
       console.log('Mock mode - flag change logged locally:', flag);
+    }
+  }, [connectionMode]);
+
+  // Broadcast strategy change (for pit)
+  const broadcastStrategyChange = useCallback((mode) => {
+    const modeUpper = String(mode).toUpperCase();
+    if (connectionMode === 'supabase' && channelRef.current) {
+      try {
+        channelRef.current.send({
+          type: 'broadcast',
+          event: 'strategy_change',
+          payload: { mode: modeUpper },
+        });
+      } catch (error) {
+        console.error('[broadcastStrategyChange] Supabase send error:', error);
+      }
+    } else {
+      console.log('Mock mode - strategy change logged locally:', modeUpper);
     }
   }, [connectionMode]);
 
@@ -278,9 +395,12 @@ export function useRealtimeTelemetry(role = 'driver') {
     incomingCommands,
     commandHistory,
     driverTelemetry,
+    driverStrategyMode,
+    setDriverStrategyMode,
     sendCommand,
     sendAck,
     broadcastDriverStatus,
     broadcastFlagChange,
+    broadcastStrategyChange,
   };
 }

@@ -134,33 +134,33 @@ export default function TelemetryDashboard() {
           <LiveMetricPanel label="Temp"       value={safeTelemetry.temp}       unit="°C"  color={colors.signalYellow} max={80}  data={safeChartData} dataKey="temp" />
         </div>
         <div className="grid grid-cols-3 gap-3">
-          <LiveMetricPanel label="Efficiency" value={safeTelemetry.efficiency} unit="%"   color="#a78bfa" max={100} data={safeChartData} dataKey="efficiency" />
-          <LiveMetricPanel label="Voltage"    value={safeTelemetry.voltage}    unit="V"   color="#60a5fa" max={50}  data={safeChartData} dataKey="voltage" />
-          <LiveMetricPanel label="Current"    value={safeTelemetry.current}    unit="A"   color="#22d3ee" max={20}  />
+          <LiveMetricPanel label="Efficiency" value={safeTelemetry.efficiency} unit="%"   color={colors.nominalGreen} max={100} data={safeChartData} dataKey="efficiency" />
+          <LiveMetricPanel label="Voltage"    value={safeTelemetry.voltage}    unit="V"   color={colors.crimsonRed} max={50}  data={safeChartData} dataKey="voltage" />
+          <LiveMetricPanel label="Current"    value={safeTelemetry.current}    unit="A"   color={colors.signalYellow} max={20}  />
         </div>
-        {/* Power and Laps Remaining */}
+        {/* Power and Completed Laps */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="rounded border border-white/[0.06] bg-[#08090C] p-4">
+          <div className="rounded border border-white/[0.06] bg-[#101217] p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[8px] font-mono tracking-widest text-white/20 uppercase">Power Output</span>
-              <div className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: colors.nominalGreen }} />
+              <span className="text-[8px] font-mono tracking-widest text-white/30 uppercase">Power Output</span>
+              <div className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: colors.crimsonRed }} />
             </div>
             <div className="flex items-baseline gap-1">
-              <span className="text-3xl font-display font-black" style={{ color: colors.nominalGreen }}>{safePower.toFixed(0)}</span>
-              <span className="text-[9px] font-mono text-white/20">Watts</span>
+              <span className="text-3xl font-display font-black" style={{ color: colors.crimsonRed }}>{safePower.toFixed(0)}</span>
+              <span className="text-[9px] font-mono text-white/30">Watts</span>
             </div>
-            <div className="text-[7px] font-mono text-white/15 mt-1">V × I = {(safeTelemetry.voltage ?? 0).toFixed(1)}V × {(safeTelemetry.current ?? 0).toFixed(1)}A</div>
+            <div className="text-[7px] font-mono text-white/20 mt-1">V × I = {(safeTelemetry.voltage ?? 0).toFixed(1)}V × {(safeTelemetry.current ?? 0).toFixed(1)}A</div>
           </div>
-          <div className="rounded border border-white/[0.06] bg-[#08090C] p-4">
+          <div className="rounded border border-white/[0.06] bg-[#101217] p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[8px] font-mono tracking-widest text-white/20 uppercase">Est. Laps Remaining</span>
+              <span className="text-[8px] font-mono tracking-widest text-white/30 uppercase">Completed Laps</span>
               <div className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: colors.nominalGreen }} />
             </div>
             <div className="flex items-baseline gap-1">
-              <span className="text-3xl font-display font-black" style={{ color: colors.nominalGreen }}>{safeEstimatedLaps}</span>
-              <span className="text-[9px] font-mono text-white/20">laps</span>
+              <span className="text-3xl font-display font-black text-[#FF1E42]">{Math.floor(safeTelemetry.lap || 0)}</span>
+              <span className="text-[9px] font-mono text-white/30">laps</span>
             </div>
-            <div className="text-[7px] font-mono text-white/15 mt-1">At current discharge rate</div>
+            <div className="text-[7px] font-mono text-white/20 mt-1">Electrathon 62-Min Session Rule</div>
           </div>
         </div>
 

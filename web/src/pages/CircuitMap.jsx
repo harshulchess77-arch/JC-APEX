@@ -29,8 +29,8 @@ export default function CircuitMap() {
   const [activeSegment, setActiveSegment] = useState(0);
 
   return (
-    <div className="min-h-screen bg-[#080808] flex flex-col">
-      <header className="flex items-center justify-between px-5 h-11 border-b border-white/[0.06] bg-[#0c0c0c] flex-shrink-0">
+    <div className="min-h-screen bg-[#08090C] flex flex-col">
+      <header className="flex items-center justify-between px-5 h-11 border-b border-white/[0.06] bg-[#101217] flex-shrink-0">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate('/pit')} className="text-white/20 hover:text-white/60 transition-colors">
             <ArrowLeft className="w-4 h-4" />
@@ -44,7 +44,7 @@ export default function CircuitMap() {
 
       <div className="flex-1 overflow-auto p-4 grid grid-cols-3 gap-4">
         {/* Circuit SVG */}
-        <div className="col-span-2 rounded border border-white/[0.06] bg-[#0e0e0e] p-4">
+        <div className="col-span-2 rounded border border-white/[0.06] bg-[#101217] p-4">
           <div className="text-[9px] font-display font-bold tracking-widest text-white/40 uppercase mb-4">Circuit Layout — Metro Circuit</div>
           <div className="relative flex items-center justify-center" style={{ height: 320 }}>
             <svg viewBox="0 0 500 300" className="w-full h-full max-h-80">
@@ -64,8 +64,8 @@ export default function CircuitMap() {
               <line x1="100" y1="140" x2="100" y2="160" stroke="white" strokeWidth="3" />
               <text x="105" y="155" fill="white" fontSize="9" fontFamily="Orbitron,monospace">S/F</text>
               {/* Pit lane */}
-              <path d="M 370 240 L 280 255 Q 240 255 220 215" fill="none" stroke="#60a5fa" strokeWidth="2" strokeDasharray="6 3" />
-              <text x="290" y="268" fill="#60a5fa" fontSize="8" fontFamily="JetBrains Mono,monospace">PIT LANE</text>
+              <path d="M 370 240 L 280 255 Q 240 255 220 215" fill="none" stroke="#FFB300" strokeWidth="2" strokeDasharray="6 3" />
+              <text x="290" y="268" fill="#FFB300" fontSize="8" fontFamily="JetBrains Mono,monospace">PIT LANE</text>
               {/* DRS label */}
               <text x="230" y="52" fill="#22c55e" fontSize="8" fontFamily="JetBrains Mono,monospace">DRS ZONE</text>
               {/* Sector labels */}
@@ -81,7 +81,7 @@ export default function CircuitMap() {
         {/* Right info panel */}
         <div className="flex flex-col gap-3">
           {/* Sector times */}
-          <div className="rounded border border-white/[0.06] bg-[#0e0e0e] p-3">
+          <div className="rounded border border-white/[0.06] bg-[#101217] p-3">
             <div className="text-[9px] font-display font-bold tracking-widest text-white/40 uppercase mb-3">Sector Times</div>
             {SECTORS.map(s => (
               <div key={s.id} className="flex items-center gap-3 mb-2 p-2 rounded bg-white/[0.02]">
@@ -99,18 +99,18 @@ export default function CircuitMap() {
           </div>
 
           {/* Pit info */}
-          <div className="rounded border border-white/[0.06] bg-[#0e0e0e] p-3">
+          <div className="rounded border border-white/[0.06] bg-[#101217] p-3">
             <div className="text-[9px] font-display font-bold tracking-widest text-white/40 uppercase mb-3">Pit Entry Info</div>
             {PIT_INFO.map(p => (
               <div key={p.label} className="flex items-center justify-between mb-1.5">
                 <span className="text-[8px] font-mono text-white/25">{p.label}</span>
-                <span className="text-[9px] font-display font-bold text-blue-400">{p.value}</span>
+                <span className="text-[9px] font-display font-bold text-[#FFB300]">{p.value}</span>
               </div>
             ))}
           </div>
 
           {/* Track segments */}
-          <div className="rounded border border-white/[0.06] bg-[#0e0e0e] p-3 flex-1">
+          <div className="rounded border border-white/[0.06] bg-[#101217] p-3 flex-1">
             <div className="text-[9px] font-display font-bold tracking-widest text-white/40 uppercase mb-3">Track Segments</div>
             <div className="space-y-1.5">
               {SEGMENTS.map((seg, i) => (

@@ -8,27 +8,27 @@ const LOG_TEMPLATES = [
   { level: 'WARN',    msg: 'Battery drain rate elevated: 0.92%/min vs projected 0.80%/min.', src: 'BATTERY' },
   { level: 'INFO',    msg: 'Ghost-Link™ heartbeat acknowledged. Latency 8ms.',                src: 'COMMS' },
   { level: 'INFO',    msg: 'Strategy mode: BALANCED. Multiplier applied: 1.0x.',              src: 'STRATEGY' },
-  { level: 'INFO',    msg: 'Lap counter incremented: 5/12.',                                  src: 'RACE' },
+  { level: 'INFO',    msg: 'Lap counter incremented: completed lap recorded.',               src: 'RACE' },
   { level: 'WARN',    msg: 'Thermal gradient: +0.12°C/s. Approaching caution threshold.',    src: 'THERMAL' },
   { level: 'ERROR',   msg: 'Voltage sag transient detected. 41.2V → 38.8V. Duration 0.4s.', src: 'POWER' },
-  { level: 'INFO',    msg: 'Oracle prediction updated. Push window opens at lap 7.',          src: 'ORACLE' },
+  { level: 'INFO',    msg: 'Oracle prediction updated. Push window open within limits.',      src: 'ORACLE' },
   { level: 'SUCCESS', msg: 'Telemetry stream stable. 20Hz confirmed.',                        src: 'TELEMETRY' },
 ];
 
 const LEVEL_STYLE = {
-  INFO:    { color: '#60a5fa', icon: Info,         bg: 'bg-blue-500/5 border-blue-500/15'    },
-  WARN:    { color: '#eab308', icon: AlertTriangle, bg: 'bg-yellow-500/5 border-yellow-500/15' },
-  ERROR:   { color: '#ef4444', icon: AlertCircle,  bg: 'bg-primary/5 border-primary/15'      },
-  SUCCESS: { color: '#22c55e', icon: CheckCircle,  bg: 'bg-green-500/5 border-green-500/15'  },
+  INFO:    { color: '#8A909D', icon: Info,          bg: 'bg-white/5 border-white/10' },
+  WARN:    { color: '#FFB300', icon: AlertTriangle, bg: 'bg-[#FFB300]/5 border-[#FFB300]/20' },
+  ERROR:   { color: '#FF1E42', icon: AlertCircle,   bg: 'bg-[#FF1E42]/5 border-[#FF1E42]/20' },
+  SUCCESS: { color: '#10B981', icon: CheckCircle,   bg: 'bg-[#10B981]/5 border-[#10B981]/20' },
 };
 
 const METRICS = [
-  { label: 'Oracle Cycles',   value: '1,240', unit: 'total',   color: '#a78bfa' },
-  { label: 'Avg Latency',     value: '8',     unit: 'ms',      color: '#22c55e' },
-  { label: 'Error Rate',      value: '0.4',   unit: '%',       color: '#eab308' },
-  { label: 'Uptime',          value: '99.8',  unit: '%',       color: '#22c55e' },
-  { label: 'Telemetry Hz',    value: '20',    unit: 'Hz',      color: '#60a5fa' },
-  { label: 'Dropped Packets', value: '3',     unit: 'total',   color: '#ef4444' },
+  { label: 'Oracle Cycles',   value: '1,240', unit: 'total',   color: '#FF1E42' },
+  { label: 'Avg Latency',     value: '8',     unit: 'ms',      color: '#10B981' },
+  { label: 'Error Rate',      value: '0.4',   unit: '%',       color: '#FFB300' },
+  { label: 'Uptime',          value: '99.8',  unit: '%',       color: '#10B981' },
+  { label: 'Telemetry Hz',    value: '20',    unit: 'Hz',      color: '#FF1E42' },
+  { label: 'Dropped Packets', value: '3',     unit: 'total',   color: '#FF1E42' },
 ];
 
 export default function SystemLogs() {
@@ -57,8 +57,8 @@ export default function SystemLogs() {
   const filtered = filter === 'ALL' ? logs : logs.filter(l => l.level === filter);
 
   return (
-    <div className="min-h-screen bg-[#080808] flex flex-col">
-      <header className="flex items-center justify-between px-5 h-11 border-b border-white/[0.06] bg-[#0c0c0c] flex-shrink-0">
+    <div className="min-h-screen bg-[#08090C] flex flex-col">
+      <header className="flex items-center justify-between px-5 h-11 border-b border-white/[0.06] bg-[#101217] flex-shrink-0">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate('/pit')} className="text-white/20 hover:text-white/60 transition-colors">
             <ArrowLeft className="w-4 h-4" />
@@ -81,20 +81,20 @@ export default function SystemLogs() {
         {/* Metrics */}
         <div className="grid grid-cols-6 gap-3 flex-shrink-0">
           {METRICS.map(m => (
-            <div key={m.label} className="rounded border border-white/[0.06] bg-[#0e0e0e] p-3 text-center">
-              <div className="text-[7px] font-mono tracking-widest text-white/20 mb-1">{m.label}</div>
+            <div key={m.label} className="rounded border border-white/[0.06] bg-[#101217] p-3 text-center">
+              <div className="text-[7px] font-mono tracking-widest text-white/30 mb-1">{m.label}</div>
               <div className="text-xl font-display font-black" style={{ color: m.color }}>{m.value}</div>
-              <div className="text-[7px] font-mono text-white/15">{m.unit}</div>
+              <div className="text-[7px] font-mono text-white/20">{m.unit}</div>
             </div>
           ))}
         </div>
 
         {/* Log stream */}
-        <div className="flex-1 rounded border border-white/[0.06] bg-[#0a0a0a] overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between px-3 py-2 border-b border-white/[0.04]">
-            <span className="text-[8px] font-display font-bold tracking-widest text-white/30 uppercase">Live Log Stream</span>
-            <div className="flex items-center gap-1.5 text-[8px] font-mono text-green-400">
-              <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+        <div className="flex-1 rounded border border-white/[0.06] bg-[#101217] overflow-hidden flex flex-col">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-white/[0.06] bg-[#08090C]/40">
+            <span className="text-[8px] font-display font-bold tracking-widest text-white/40 uppercase">Live Log Stream</span>
+            <div className="flex items-center gap-1.5 text-[8px] font-mono text-[#10B981]">
+              <div className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
               LIVE
             </div>
           </div>
@@ -107,7 +107,7 @@ export default function SystemLogs() {
                   <Icon className="w-3 h-3 flex-shrink-0 mt-0.5" style={{ color: cfg.color }} />
                   <span className="text-white/20 flex-shrink-0 text-[8px]">{log.time}</span>
                   <span className="text-[8px] flex-shrink-0 font-bold" style={{ color: cfg.color }}>[{log.src}]</span>
-                  <span className="text-white/50">{log.msg}</span>
+                  <span className="text-white/60">{log.msg}</span>
                 </div>
               );
             })}

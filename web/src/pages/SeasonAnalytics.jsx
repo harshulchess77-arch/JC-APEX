@@ -30,17 +30,17 @@ const radarData = [
   { metric: 'Pace', JC: 94, 'Driver 2': 75, 'Driver 3': 70 },
 ];
 
-const COLORS = { JC: '#ef4444', 'Driver 2': '#22c55e', 'Driver 3': '#60a5fa', 'Driver 4': '#a78bfa' };
+const COLORS = { JC: '#FF1E42', 'Driver 2': '#22c55e', 'Driver 3': '#FFB300', 'Driver 4': '#a78bfa' };
 
-const tip = { contentStyle: { background: '#111', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 4, fontSize: 10 }, labelStyle: { color: '#fff' } };
+const tip = { contentStyle: { background: '#101217', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 4, fontSize: 10 }, labelStyle: { color: '#fff' } };
 
 export default function SeasonAnalytics() {
   const navigate = useNavigate();
   const [selected, setSelected] = useState('JC');
 
   return (
-    <div className="min-h-screen bg-[#080808] flex flex-col">
-      <header className="flex items-center justify-between px-5 h-11 border-b border-white/[0.06] bg-[#0c0c0c] flex-shrink-0">
+    <div className="min-h-screen bg-[#08090C] flex flex-col">
+      <header className="flex items-center justify-between px-5 h-11 border-b border-white/[0.06] bg-[#101217] flex-shrink-0">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate('/pit')} className="text-white/20 hover:text-white/60 transition-colors">
             <ArrowLeft className="w-4 h-4" />
@@ -56,12 +56,12 @@ export default function SeasonAnalytics() {
         {/* Summary cards */}
         <div className="grid grid-cols-4 gap-3">
           {[
-            { label: 'TOTAL RACES', value: 8, color: '#ef4444' },
+            { label: 'TOTAL RACES', value: 8, color: '#FF1E42' },
             { label: 'TOTAL WINS',  value: 9, color: '#22c55e' },
             { label: 'PODIUMS',     value: 18, color: '#eab308' },
-            { label: 'DRIVERS',     value: 4, color: '#60a5fa' },
+            { label: 'DRIVERS',     value: 4, color: '#FFB300' },
           ].map(s => (
-            <div key={s.label} className="rounded border border-white/[0.06] bg-[#0e0e0e] p-4 text-center">
+            <div key={s.label} className="rounded border border-white/[0.06] bg-[#101217] p-4 text-center">
               <div className="text-[8px] font-mono tracking-widest text-white/20 mb-1">{s.label}</div>
               <div className="text-3xl font-display font-black" style={{ color: s.color }}>{s.value}</div>
             </div>
@@ -70,7 +70,7 @@ export default function SeasonAnalytics() {
 
         <div className="grid grid-cols-2 gap-4">
           {/* Points over season */}
-          <div className="rounded border border-white/[0.06] bg-[#0e0e0e] p-4">
+          <div className="rounded border border-white/[0.06] bg-[#101217] p-4">
             <div className="text-[9px] font-display font-bold tracking-widest text-white/40 uppercase mb-4">Points Per Race</div>
             <ResponsiveContainer width="100%" height={160}>
               <LineChart data={performanceData}>
@@ -85,27 +85,27 @@ export default function SeasonAnalytics() {
           </div>
 
           {/* Win / Podium bars */}
-          <div className="rounded border border-white/[0.06] bg-[#0e0e0e] p-4">
+          <div className="rounded border border-white/[0.06] bg-[#101217] p-4">
             <div className="text-[9px] font-display font-bold tracking-widest text-white/40 uppercase mb-4">Wins & Podiums</div>
             <ResponsiveContainer width="100%" height={160}>
               <BarChart data={podiumData}>
                 <XAxis dataKey="driver" tick={{ fontSize: 9, fill: '#555' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 9, fill: '#555' }} axisLine={false} tickLine={false} />
                 <Tooltip {...tip} />
-                <Bar dataKey="wins" fill="#ef4444" radius={2} />
+                <Bar dataKey="wins" fill="#FF1E42" radius={2} />
                 <Bar dataKey="podiums" fill="#eab308" radius={2} />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
           {/* Radar chart */}
-          <div className="rounded border border-white/[0.06] bg-[#0e0e0e] p-4">
+          <div className="rounded border border-white/[0.06] bg-[#101217] p-4">
             <div className="text-[9px] font-display font-bold tracking-widest text-white/40 uppercase mb-4">Driver Skill Radar</div>
             <ResponsiveContainer width="100%" height={200}>
               <RadarChart data={radarData}>
                 <PolarGrid stroke="#1a1a1a" />
                 <PolarAngleAxis dataKey="metric" tick={{ fontSize: 8, fill: '#555' }} />
-                <Radar name="JC" dataKey="JC" stroke="#ef4444" fill="#ef4444" fillOpacity={0.15} />
+                <Radar name="JC" dataKey="JC" stroke="#FF1E42" fill="#FF1E42" fillOpacity={0.15} />
                 <Radar name="Driver 2" dataKey="Driver 2" stroke="#22c55e" fill="#22c55e" fillOpacity={0.1} />
                 <Legend wrapperStyle={{ fontSize: 9 }} />
               </RadarChart>
@@ -113,7 +113,7 @@ export default function SeasonAnalytics() {
           </div>
 
           {/* Driver table */}
-          <div className="rounded border border-white/[0.06] bg-[#0e0e0e] p-4">
+          <div className="rounded border border-white/[0.06] bg-[#101217] p-4">
             <div className="text-[9px] font-display font-bold tracking-widest text-white/40 uppercase mb-4">Driver Season Summary</div>
             <table className="w-full text-[10px] font-mono">
               <thead>

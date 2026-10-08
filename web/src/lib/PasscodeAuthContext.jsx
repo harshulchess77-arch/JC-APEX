@@ -53,42 +53,72 @@ export const ROLE_DASHBOARDS = {
 };
 
 export const PasscodeAuthProvider = ({ children }) => {
-  const [role, setRole] = useState(null);
-  const [userRole, setUserRole] = useState(null);
-  const [isDemoMode, setIsDemoMode] = useState(false);
-  const [isAuthed, setIsAuthed] = useState(false);
-  const [loading, setLoading] = useState(true);
+  // Synchronous restoration on mount to prevent any auth redirect race condition
+  const initial = (() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY) || sessionStorage.getItem(STORAGE_KEY);
+      const saved = raw ? JSON.parse(raw) : null;
+      const roleSaved = localStorage.getItem('jc_apex_user_role') || sessionStorage.getItem('jc_apex_user_role');
+      const sessionIdSaved = localStorage.getItem('jc_apex_session_id') || sessionStorage.getItem('jc_apex_session_id');
+
+      if (saved && saved.isAuthed) {
+        const effectiveRole = saved.userRole || saved.role || roleSaved || 'pit';
+        return {
+          isAuthed: true,
+          role: effectiveRole,
+          userRole: effectiveRole,
+          isDemoMode: Boolean(saved.isDemoMode),
+          sessionId: saved.sessionId || sessionIdSaved || 'race-session-48v',
+        };
+      }
+      if (roleSaved) {
+        return {
+          isAuthed: true,
+          role: roleSaved,
+          userRole: roleSaved,
+          isDemoMode: roleSaved === 'demo',
+          sessionId: sessionIdSaved || 'race-session-48v',
+        };
+      }
+    } catch (err) {
+      console.warn('[PasscodeAuth] Failed reading saved session:', err);
+    }
+    return {
+      isAuthed: false,
+      role: null,
+      userRole: null,
+      isDemoMode: false,
+      sessionId: 'race-session-48v',
+    };
+  })();
+
+  const [role, setRole] = useState(initial.role);
+  const [userRole, setUserRole] = useState(initial.userRole);
+  const [sessionId, setSessionId] = useState(initial.sessionId);
+  const [isDemoMode, setIsDemoMode] = useState(initial.isDemoMode);
+  const [isAuthed, setIsAuthed] = useState(initial.isAuthed);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    let isMounted = true;
-
-    // Safety fallback: Force disable loading screen after 1.5 seconds
-    const timer = setTimeout(() => {
-      if (isMounted) setLoading(false);
-    }, 1500);
-
     try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+      const raw = localStorage.getItem(STORAGE_KEY) || sessionStorage.getItem(STORAGE_KEY);
+      const saved = raw ? JSON.parse(raw) : null;
+      const roleSaved = localStorage.getItem('jc_apex_user_role') || sessionStorage.getItem('jc_apex_user_role');
+      const sessionIdSaved = localStorage.getItem('jc_apex_session_id') || sessionStorage.getItem('jc_apex_session_id');
+
       if (saved && saved.isAuthed) {
-        const effectiveRole = saved.userRole || saved.role || 'pit';
+        const effectiveRole = saved.userRole || saved.role || roleSaved || 'pit';
         setRole(effectiveRole);
         setUserRole(effectiveRole);
         setIsDemoMode(Boolean(saved.isDemoMode));
+        setSessionId(saved.sessionId || sessionIdSaved || 'race-session-48v');
         setIsAuthed(true);
+        console.log('[PasscodeAuth] Session restored from storage:', { effectiveRole, sessionId: saved.sessionId });
       }
     } catch {
       // ignore malformed storage
     }
-
-    if (isMounted) {
-      setLoading(false);
-      clearTimeout(timer);
-    }
-
-    return () => {
-      isMounted = false;
-      clearTimeout(timer);
-    };
+    setLoading(false);
   }, []);
 
   /**
@@ -128,18 +158,32 @@ export const PasscodeAuthProvider = ({ children }) => {
     }
 
     if (match) {
+      const activeSessionId = sessionId || 'race-session-48v';
       setRole(match.role);
       setUserRole(match.userRole);
       setIsDemoMode(match.isDemoMode);
       setIsAuthed(true);
 
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      const sessionPayload = {
         isAuthed: true,
         role: match.role,
         userRole: match.userRole,
         isDemoMode: match.isDemoMode,
         route: match.route,
-      }));
+        sessionId: activeSessionId,
+        timestamp: Date.now(),
+      };
+
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(sessionPayload));
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(sessionPayload));
+        localStorage.setItem('jc_apex_user_role', match.userRole);
+        sessionStorage.setItem('jc_apex_user_role', match.userRole);
+        localStorage.setItem('jc_apex_session_id', activeSessionId);
+        sessionStorage.setItem('jc_apex_session_id', activeSessionId);
+      } catch (err) {
+        console.warn('[PasscodeAuth] Storage write warning:', err);
+      }
 
       return {
         success: true,
@@ -147,6 +191,7 @@ export const PasscodeAuthProvider = ({ children }) => {
         userRole: match.userRole,
         route: match.route,
         isDemoMode: match.isDemoMode,
+        sessionId: activeSessionId,
       };
     }
 
@@ -158,7 +203,14 @@ export const PasscodeAuthProvider = ({ children }) => {
     setUserRole(null);
     setIsDemoMode(false);
     setIsAuthed(false);
-    localStorage.removeItem(STORAGE_KEY);
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+      sessionStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem('jc_apex_user_role');
+      sessionStorage.removeItem('jc_apex_user_role');
+      localStorage.removeItem('jc_apex_session_id');
+      sessionStorage.removeItem('jc_apex_session_id');
+    } catch {}
   };
 
   return (
@@ -166,6 +218,8 @@ export const PasscodeAuthProvider = ({ children }) => {
       value={{
         role,
         userRole: userRole || role,
+        sessionId,
+        setSessionId,
         isDemoMode,
         setIsDemoMode,
         isAuthed,

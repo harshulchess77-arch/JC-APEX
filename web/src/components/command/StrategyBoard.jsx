@@ -4,14 +4,14 @@ import { Plus, Trash2, GripVertical, Flag, Battery, Thermometer, Wrench, AlertTr
 import { motion } from 'framer-motion';
 
 const COLUMN_CONFIG = {
-  planned:     { label: 'PLANNED',      color: 'text-blue-400',   border: 'border-blue-500/20',   bg: 'bg-blue-500/5',   dot: 'bg-blue-400'  },
+  planned:     { label: 'PLANNED',      color: 'text-[#FF1E42]',   border: 'border-[#FF1E42]/20',   bg: 'bg-[#FF1E42]/5',   dot: 'bg-[#FF1E42]'  },
   active:      { label: 'IN PROGRESS',  color: 'text-yellow-400', border: 'border-yellow-500/20', bg: 'bg-yellow-500/5', dot: 'bg-yellow-400' },
   done:        { label: 'COMPLETED',    color: 'text-green-400',  border: 'border-green-500/20',  bg: 'bg-green-500/5',  dot: 'bg-green-400'  },
   contingency: { label: 'CONTINGENCY',  color: 'text-primary',    border: 'border-primary/20',    bg: 'bg-primary/5',    dot: 'bg-primary'    },
 };
 
 const TYPE_CONFIG = {
-  pitstop:   { label: 'Pit Stop',       icon: Wrench,        color: 'text-blue-400',   bg: 'bg-blue-500/10'  },
+  pitstop:   { label: 'Pit Stop',       icon: Wrench,        color: 'text-[#FF1E42]',   bg: 'bg-[#FF1E42]/10'  },
   battery:   { label: 'Battery Check',  icon: Battery,       color: 'text-green-400',  bg: 'bg-green-500/10' },
   thermal:   { label: 'Thermal Alert',  icon: Thermometer,   color: 'text-yellow-400', bg: 'bg-yellow-500/10'},
   flag:      { label: 'Flag Response',  icon: Flag,          color: 'text-primary',    bg: 'bg-primary/10'   },
@@ -21,25 +21,15 @@ const TYPE_CONFIG = {
 const PRIORITY_STYLE = {
   critical: 'text-primary border-primary/30 bg-primary/10',
   high:     'text-yellow-400 border-yellow-500/30 bg-yellow-500/10',
-  medium:   'text-blue-400 border-blue-500/30 bg-blue-500/10',
+  medium:   'text-[#FF1E42] border-[#FF1E42]/30 bg-[#FF1E42]/10',
   low:      'text-muted-foreground/50 border-border bg-secondary/20',
 };
 
 const INITIAL_CARDS = {
-  planned: [
-    { id: 'c1', type: 'pitstop',  title: 'Lap 5 Pit Window',     detail: 'Check tire pressure + driver check-in', lap: 5, priority: 'medium' },
-    { id: 'c2', type: 'battery',  title: 'Battery Status Check', detail: 'Verify drain rate vs projection',        lap: 3, priority: 'high'   },
-  ],
-  active: [
-    { id: 'c3', type: 'thermal',  title: 'Motor Temp Monitor',   detail: 'Watch for >55°C trigger', lap: 0, priority: 'high' },
-  ],
-  done: [
-    { id: 'c4', type: 'pitstop',  title: 'Pre-Race Systems Check', detail: 'All systems verified nominal', lap: 0, priority: 'low' },
-  ],
-  contingency: [
-    { id: 'c5', type: 'emergency', title: 'Battery Critical Protocol', detail: 'If <15%: switch to conserve, signal driver', lap: 0, priority: 'critical' },
-    { id: 'c6', type: 'flag',      title: 'Yellow Flag Response',      detail: 'Reduce speed 20%, hold position',            lap: 0, priority: 'medium'   },
-  ],
+  planned: [],
+  active: [],
+  done: [],
+  contingency: [],
 };
 
 let nextId = 100;

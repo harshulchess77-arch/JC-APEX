@@ -76,6 +76,7 @@ export default function PitCenter() {
     commandHistory,
     sendCommand: realtimeSendCommand,
     broadcastFlagChange,
+    broadcastStrategyChange,
   } = useRealtimeTelemetry('pit');
   const [activeTab, setActiveTab] = useState('overview');
   const [sessionActive, setSessionActive] = useState(false);
@@ -97,8 +98,8 @@ export default function PitCenter() {
     }
   };
 
-  const battColor = telemetry.battery < 20 ? '#ef4444' : telemetry.battery < 40 ? '#eab308' : '#22c55e';
-  const tempColor = telemetry.temp > 58 ? '#ef4444' : telemetry.temp > 46 ? '#eab308' : '#22d3ee';
+  const battColor = telemetry.battery < 20 ? '#FF1E42' : telemetry.battery < 40 ? '#FFB300' : '#10B981';
+  const tempColor = telemetry.temp > 58 ? '#FF1E42' : telemetry.temp > 46 ? '#FFB300' : '#10B981';
   const latestOracle = oracleMessages[0];
   const oracleSev = latestOracle?.severity || 'nominal';
 
@@ -121,11 +122,18 @@ export default function PitCenter() {
     broadcastFlagChange(newFlag);
   };
 
+  const handleStrategyChange = (newStrategy) => {
+    setStrategy(newStrategy);
+    if (broadcastStrategyChange) {
+      broadcastStrategyChange(newStrategy);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-[#080808] flex flex-col overflow-hidden">
+    <div className="min-h-screen bg-[#08090C] flex flex-col overflow-hidden">
 
       {/* ─── HEADER ─── */}
-      <header className="flex-shrink-0 flex items-center justify-between px-4 h-10 border-b border-white/[0.06] bg-[#0c0c0c]">
+      <header className="flex-shrink-0 flex items-center justify-between px-4 h-10 border-b border-white/[0.06] bg-[#101217]">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <div className="w-5 h-5 bg-primary rounded flex items-center justify-center">
@@ -193,22 +201,23 @@ export default function PitCenter() {
       </header>
 
       {/* ─── METRICS STRIP ─── */}
-      <div className="flex-shrink-0 flex items-center border-b border-white/[0.06] bg-[#0a0a0a] overflow-x-auto">
+      <div className="flex-shrink-0 flex items-center border-b border-white/[0.06] bg-[#101217] overflow-x-auto">
         <MetricChip label="BATTERY" value={`${telemetry.battery.toFixed(1)}%`} color={battColor} />
         <MetricChip label="TEMP" value={`${telemetry.temp.toFixed(1)}°C`} color={tempColor} />
-        <MetricChip label="EFFICIENCY" value={`${telemetry.efficiency.toFixed(0)}%`} color="#a78bfa" />
-        <MetricChip label="POWER (WATTS)" value={`${(telemetry.power != null ? telemetry.power : telemetry.current * telemetry.voltage).toFixed(0)}W`} color="#60a5fa" />
-        <MetricChip label="48V VOLTAGE" value={`${telemetry.voltage.toFixed(1)}V`} color="#60a5fa" />
-        <MetricChip label="CURRENT" value={`${telemetry.current.toFixed(1)}A`} color="#818cf8" />
-        <MetricChip label="HALL SPEED" value={`${(telemetry.speed_hall != null ? telemetry.speed_hall : telemetry.speed).toFixed(1)}`} color="#ef4444" />
-        <MetricChip label="GPS SPEED" value={`${(telemetry.speed_gps != null ? telemetry.speed_gps : telemetry.speed).toFixed(1)}`} color="#f59e0b" />
-        <MetricChip label="LAP" value={`#${Math.floor(telemetry.lap)}`} color="#22c55e" />
-        <MetricChip label="DISTANCE" value={`${(Math.floor(telemetry.lap) * 0.25).toFixed(2)}mi`} color="#a78bfa" />
+        <MetricChip label="EFFICIENCY" value={`${telemetry.efficiency.toFixed(0)}%`} color="#10B981" />
+        <MetricChip label="POWER (WATTS)" value={`${(telemetry.power != null ? telemetry.power : telemetry.current * telemetry.voltage).toFixed(0)}W`} color="#FF1E42" />
+        <MetricChip label="48V VOLTAGE" value={`${telemetry.voltage.toFixed(1)}V`} color="#FF1E42" />
+        <MetricChip label="CURRENT" value={`${telemetry.current.toFixed(1)}A`} color="#FFB300" />
+        <MetricChip label="HALL SPEED" value={`${(telemetry.speed_hall != null ? telemetry.speed_hall : telemetry.speed).toFixed(1)}`} color="#FF1E42" />
+        <MetricChip label="GPS SPEED" value={`${(telemetry.speed_gps != null ? telemetry.speed_gps : telemetry.speed).toFixed(1)}`} color="#FFB300" />
+        <MetricChip label="COMPLETED LAPS" value={`#${Math.floor(telemetry.lap)}`} color="#10B981" />
+        <MetricChip label="DISTANCE" value={`${(Math.floor(telemetry.lap) * 0.25).toFixed(2)}mi`} color="#FF1E42" />
         <div className="ml-auto flex-shrink-0 px-3">
           <span className={`text-[9px] font-mono font-bold px-2.5 py-1 rounded border tracking-widest ${
             flag === 'green'  ? 'border-green-500/40 text-green-400 bg-green-500/10' :
             flag === 'yellow' ? 'border-yellow-500/40 text-yellow-400 bg-yellow-500/10' :
             flag === 'red'    ? 'border-primary/40 text-primary bg-primary/10 animate-pulse' :
+            flag === 'black'  ? 'border-white/20 text-white bg-black' :
                                 'border-white/10 text-white/30 bg-white/5'
           }`}>● {flag.toUpperCase()}</span>
         </div>
@@ -218,7 +227,7 @@ export default function PitCenter() {
       <div className="flex flex-1 overflow-hidden">
 
         {/* ─── SIDEBAR ─── */}
-        <aside className="w-[200px] flex-shrink-0 border-r border-white/[0.06] bg-[#0b0b0b] flex flex-col overflow-y-auto">
+        <aside className="w-[200px] flex-shrink-0 border-r border-white/[0.06] bg-[#101217] flex flex-col overflow-y-auto">
 
           {/* Speed Dial */}
           <div className="p-3 pb-2 border-b border-white/[0.06]">
@@ -234,12 +243,12 @@ export default function PitCenter() {
             <div className="flex items-baseline gap-1 mb-1.5">
               <span className="text-3xl font-display font-black" style={{ color: battColor }}>{telemetry.battery.toFixed(0)}</span>
               <span className="text-white/25 font-mono text-xs">%</span>
-              <span className="ml-auto text-sm font-display font-bold text-blue-400">{telemetry.voltage.toFixed(1)}V</span>
+              <span className="ml-auto text-sm font-display font-bold text-[#FF1E42]">{telemetry.voltage.toFixed(1)}V</span>
             </div>
             <BatteryBar battery={telemetry.battery} />
             <div className="flex items-center justify-between mt-1.5 text-[8px] font-mono text-white/20">
-              <span>EST. REMAINING —</span>
-              <span className="text-green-400 font-bold">{estimatedLapsRemaining} LAPS</span>
+              <span>PACE TARGET —</span>
+              <span className="text-green-400 font-bold">OPTIMAL</span>
             </div>
           </div>
 
@@ -250,19 +259,19 @@ export default function PitCenter() {
             </div>
             <div className="grid grid-cols-2 gap-1">
               <button onClick={() => handleSendCommand('BOX THIS LAP')}
-                className="py-2 rounded text-[9px] font-display font-bold tracking-wider transition-all bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20">
+                className="py-2 rounded text-[9px] font-display font-bold tracking-wider transition-all bg-[#FF1E42]/10 border border-[#FF1E42]/30 text-[#FF1E42] hover:bg-[#FF1E42]/20 cursor-pointer">
                 BOX THIS LAP
               </button>
               <button onClick={() => handleSendCommand('PACE DOWN')}
-                className="py-2 rounded text-[9px] font-display font-bold tracking-wider transition-all bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/20 relative">
+                className="py-2 rounded text-[9px] font-display font-bold tracking-wider transition-all bg-[#FFB300]/10 border border-[#FFB300]/30 text-[#FFB300] hover:bg-[#FFB300]/20 cursor-pointer">
                 PACE DOWN
               </button>
               <button onClick={() => handleSendCommand('TARGET PACE: 25 MPH')}
-                className="py-2 rounded text-[9px] font-display font-bold tracking-wider transition-all bg-green-500/10 border border-green-500/30 text-green-400 hover:bg-green-500/20">
+                className="py-2 rounded text-[9px] font-display font-bold tracking-wider transition-all bg-[#10B981]/10 border border-[#10B981]/30 text-[#10B981] hover:bg-[#10B981]/20 cursor-pointer">
                 TARGET 25 MPH
               </button>
               <button onClick={() => handleSendCommand('PUSH HARD')}
-                className="py-2 rounded text-[9px] font-display font-bold tracking-wider transition-all bg-purple-500/10 border border-purple-500/30 text-purple-400 hover:bg-purple-500/20">
+                className="py-2 rounded text-[9px] font-display font-bold tracking-wider transition-all bg-[#FF1E42]/10 border border-[#FF1E42]/30 text-[#FF1E42] hover:bg-[#FF1E42]/20 cursor-pointer">
                 PUSH HARD
               </button>
             </div>
@@ -325,7 +334,7 @@ export default function PitCenter() {
             </div>
             <div className="space-y-1">
               {STRATEGY_MODES.map(s => (
-                <button key={s.id} onClick={() => setStrategy(s.id)}
+                <button key={s.id} onClick={() => handleStrategyChange(s.id)}
                   className={`w-full flex items-center justify-between px-2.5 py-2 rounded border text-[10px] font-display font-bold tracking-wider transition-all ${
                     strategy === s.id
                       ? 'bg-white/5 border-white/10'
@@ -356,8 +365,8 @@ export default function PitCenter() {
             <div className="text-[7px] font-mono text-white/15 tracking-wider mb-1">RACE TIME</div>
             <div className="text-xl font-display font-black text-primary">{formatTime(telemetry.raceTime)}</div>
             <div className="flex items-center gap-2 mt-1 text-[8px] font-mono text-white/20">
-              <span>LAP <span className="text-white/40 font-bold">{Math.floor(telemetry.lap)}</span></span>
-              <span>/ {telemetry.totalLaps}</span>
+              <span>COMPLETED <span className="text-white/40 font-bold">{Math.floor(telemetry.lap)} LAPS</span></span>
+              <span>· 62M TIME CAP</span>
             </div>
           </div>
         </aside>
@@ -366,7 +375,7 @@ export default function PitCenter() {
         <div className="flex-1 flex flex-col overflow-hidden">
 
           {/* Tab bar */}
-          <div className="flex-shrink-0 flex items-center border-b border-white/[0.06] bg-[#0a0a0a] overflow-x-auto">
+          <div className="flex-shrink-0 flex items-center border-b border-white/[0.06] bg-[#101217] overflow-x-auto">
             {TABS.map(tab => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                 className={`px-4 py-2.5 text-[9px] font-display font-bold tracking-[0.2em] uppercase transition-all flex-shrink-0 border-b-2 -mb-px ${
@@ -399,9 +408,9 @@ export default function PitCenter() {
       </div>
 
       {/* ─── STATUS BAR ─── */}
-      <div className="flex-shrink-0 flex items-center justify-between px-4 h-7 border-t border-white/[0.06] bg-[#0c0c0c]">
+      <div className="flex-shrink-0 flex items-center justify-between px-4 h-7 border-t border-white/[0.06] bg-[#101217]">
         <div className="flex items-center gap-3 text-[8px] font-mono">
-          <span className="text-green-400">● TELEMETRY LIVE · 20Hz</span>
+          <span className="text-[#10B981]">● TELEMETRY LIVE · 20Hz</span>
           <span className="text-white/10">·</span>
           <span className="text-white/20">ORACLE v2</span>
           <span className="text-white/10">·</span>
@@ -410,8 +419,8 @@ export default function PitCenter() {
         <div className="flex items-center gap-4 text-[8px] font-mono text-white/20">
           <span>BATT <span style={{ color: battColor }}>{telemetry.battery.toFixed(1)}%</span></span>
           <span>TEMP <span style={{ color: tempColor }}>{telemetry.temp.toFixed(1)}°C</span></span>
-          <span>EFF <span className="text-purple-400">{telemetry.efficiency.toFixed(0)}%</span></span>
-          <span>V <span className="text-blue-400">{telemetry.voltage.toFixed(1)}</span></span>
+          <span>EFF <span className="text-[#10B981]">{telemetry.efficiency.toFixed(0)}%</span></span>
+          <span>V <span className="text-[#FF1E42]">{telemetry.voltage.toFixed(1)}V</span></span>
         </div>
       </div>
     </div>

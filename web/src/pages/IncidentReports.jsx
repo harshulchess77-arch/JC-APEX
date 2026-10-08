@@ -10,8 +10,8 @@ const INITIAL = [
 ];
 
 const SEV_STYLE = {
-  MINOR:   'border-blue-500/30 bg-blue-500/10 text-blue-400',
-  WARNING: 'border-yellow-500/30 bg-yellow-500/10 text-yellow-400',
+  MINOR:   'border-[#10B981]/30 bg-[#10B981]/10 text-[#10B981]',
+  WARNING: 'border-[#FFB300]/30 bg-[#FFB300]/10 text-[#FFB300]',
   SERIOUS: 'border-primary/30 bg-primary/10 text-primary',
   DNF:     'border-primary/40 bg-primary/15 text-primary',
 };
@@ -40,14 +40,14 @@ export default function IncidentReports() {
   const filtered = filter === 'ALL' ? incidents : incidents.filter(i => i.severity === filter);
 
   return (
-    <div className="min-h-screen bg-[#080808] flex flex-col">
-      <header className="flex items-center justify-between px-5 h-11 border-b border-white/[0.06] bg-[#0c0c0c] flex-shrink-0">
+    <div className="min-h-screen bg-[#08090C] flex flex-col">
+      <header className="flex items-center justify-between px-5 h-11 border-b border-white/[0.06] bg-[#101217] flex-shrink-0">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate('/pit')} className="text-white/20 hover:text-white/60 transition-colors">
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div className="w-px h-4 bg-white/10" />
-          <AlertTriangle className="w-4 h-4 text-yellow-400" />
+          <AlertTriangle className="w-4 h-4 text-[#FFB300]" />
           <span className="font-display font-black text-sm tracking-widest text-white">INCIDENT REPORTS</span>
         </div>
         <div className="flex items-center gap-2">
@@ -58,7 +58,7 @@ export default function IncidentReports() {
             </button>
           ))}
           <button onClick={() => setShowForm(v => !v)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded border border-primary/30 bg-primary/10 text-primary text-[9px] font-display font-bold tracking-widest hover:bg-primary/20 transition-colors ml-2">
+            className="flex items-center gap-1 px-3 py-1.5 rounded border border-primary/30 bg-primary/10 text-primary text-[9px] font-display font-bold tracking-widest hover:bg-primary/20 transition-colors ml-2 cursor-pointer">
             <Plus className="w-3 h-3" /> LOG INCIDENT
           </button>
         </div>
@@ -67,8 +67,8 @@ export default function IncidentReports() {
       <div className="flex-1 overflow-auto p-4 max-w-4xl mx-auto w-full space-y-3">
         {/* Form */}
         {showForm && (
-          <div className="rounded border border-yellow-500/20 bg-yellow-500/5 p-4">
-            <div className="text-[9px] font-display font-bold tracking-widest text-yellow-400/70 mb-3 uppercase">New Incident Report</div>
+          <div className="rounded border border-[#FFB300]/20 bg-[#101217] p-4">
+            <div className="text-[9px] font-display font-bold tracking-widest text-[#FFB300]/80 mb-3 uppercase">New Incident Report</div>
             <div className="grid grid-cols-3 gap-3 mb-3">
               {[
                 { label: 'Race / Event', key: 'race', placeholder: 'e.g. Round 8' },
@@ -79,40 +79,40 @@ export default function IncidentReports() {
                 <div key={f.key}>
                   <label className="block text-[7px] font-mono text-white/20 mb-1 tracking-widest uppercase">{f.label}</label>
                   <input value={form[f.key]} onChange={e => set(f.key)(e.target.value)} placeholder={f.placeholder}
-                    className="w-full px-2.5 py-1.5 rounded border border-white/[0.06] bg-[#111] text-white/60 font-mono text-xs focus:outline-none placeholder:text-white/10" />
+                    className="w-full px-2.5 py-1.5 rounded border border-white/[0.06] bg-[#08090C] text-white/60 font-mono text-xs focus:outline-none placeholder:text-white/10" />
                 </div>
               ))}
               <div>
                 <label className="block text-[7px] font-mono text-white/20 mb-1 tracking-widest uppercase">Type</label>
-                <select value={form.type} onChange={e => set('type')(e.target.value)} className="w-full px-2.5 py-1.5 rounded border border-white/[0.06] bg-[#111] text-white/60 font-mono text-xs focus:outline-none">
+                <select value={form.type} onChange={e => set('type')(e.target.value)} className="w-full px-2.5 py-1.5 rounded border border-white/[0.06] bg-[#08090C] text-white/60 font-mono text-xs focus:outline-none">
                   {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-[7px] font-mono text-white/20 mb-1 tracking-widest uppercase">Severity</label>
-                <select value={form.severity} onChange={e => set('severity')(e.target.value)} className="w-full px-2.5 py-1.5 rounded border border-white/[0.06] bg-[#111] text-white/60 font-mono text-xs focus:outline-none">
+                <select value={form.severity} onChange={e => set('severity')(e.target.value)} className="w-full px-2.5 py-1.5 rounded border border-white/[0.06] bg-[#08090C] text-white/60 font-mono text-xs focus:outline-none">
                   {SEVERITIES.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
             </div>
             <textarea value={form.notes} onChange={e => set('notes')(e.target.value)} rows={2} placeholder="Incident description..."
-              className="w-full px-2.5 py-2 mb-3 rounded border border-white/[0.06] bg-[#111] text-white/60 font-mono text-xs resize-none focus:outline-none placeholder:text-white/10" />
+              className="w-full px-2.5 py-2 mb-3 rounded border border-white/[0.06] bg-[#08090C] text-white/60 font-mono text-xs resize-none focus:outline-none placeholder:text-white/10" />
             <div className="flex gap-2">
-              <button onClick={add} className="px-4 py-1.5 rounded bg-yellow-500/15 border border-yellow-500/30 text-yellow-400 text-[9px] font-display font-bold tracking-widest hover:bg-yellow-500/25 transition-colors">SUBMIT REPORT</button>
-              <button onClick={() => setShowForm(false)} className="px-3 py-1.5 rounded border border-white/10 text-white/25 text-[9px] font-mono hover:text-white/50 transition-colors">CANCEL</button>
+              <button onClick={add} className="px-4 py-1.5 rounded bg-[#FFB300]/15 border border-[#FFB300]/30 text-[#FFB300] text-[9px] font-display font-bold tracking-widest hover:bg-[#FFB300]/25 transition-colors cursor-pointer">SUBMIT REPORT</button>
+              <button onClick={() => setShowForm(false)} className="px-3 py-1.5 rounded border border-white/10 text-white/25 text-[9px] font-mono hover:text-white/50 transition-colors cursor-pointer">CANCEL</button>
             </div>
           </div>
         )}
 
         {filtered.map(inc => (
-          <div key={inc.id} className={`rounded border bg-[#0e0e0e] p-4 ${inc.resolved ? 'border-white/[0.04]' : 'border-yellow-500/15'}`}>
+          <div key={inc.id} className={`rounded border bg-[#101217] p-4 ${inc.resolved ? 'border-white/[0.06]' : 'border-[#FFB300]/30'}`}>
             <div className="flex items-start gap-4">
               <div className="flex-1">
                 <div className="flex items-center gap-3 flex-wrap mb-1.5">
                   <span className={`text-[8px] font-display font-bold tracking-widest px-2 py-0.5 rounded border ${SEV_STYLE[inc.severity]}`}>{inc.severity}</span>
                   <span className="text-[8px] font-mono text-white/30 px-1.5 py-0.5 rounded bg-white/5">{inc.type}</span>
                   <span className="text-sm font-display font-bold text-white/70">{inc.driver}</span>
-                  {inc.resolved && <span className="text-[7px] font-mono text-green-400 flex items-center gap-1"><CheckCircle className="w-3 h-3" />RESOLVED</span>}
+                  {inc.resolved && <span className="text-[7px] font-mono text-[#10B981] flex items-center gap-1"><CheckCircle className="w-3 h-3" />RESOLVED</span>}
                 </div>
                 <div className="text-[8px] font-mono text-white/25 mb-2">
                   {inc.race} · Lap {inc.lap}{inc.penalty ? ` · Penalty: ${inc.penalty}` : ''}
@@ -121,9 +121,9 @@ export default function IncidentReports() {
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 {!inc.resolved && (
-                  <button onClick={() => resolve(inc.id)} className="px-2.5 py-1 rounded border border-green-500/25 text-green-400 text-[8px] font-mono hover:bg-green-500/10 transition-colors">RESOLVE</button>
+                  <button onClick={() => resolve(inc.id)} className="px-2.5 py-1 rounded border border-[#10B981]/30 text-[#10B981] text-[8px] font-mono hover:bg-[#10B981]/10 transition-colors cursor-pointer">RESOLVE</button>
                 )}
-                <button onClick={() => remove(inc.id)} className="p-1.5 text-white/15 hover:text-primary transition-colors">
+                <button onClick={() => remove(inc.id)} className="p-1.5 text-white/15 hover:text-primary transition-colors cursor-pointer">
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>

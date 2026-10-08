@@ -47,10 +47,10 @@ export default function RaceSetupPanel({ open, onClose, onStart, isRunning, onSt
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <motion.div initial={{ scale: 0.96, y: 8 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.96, y: 8 }}
-            className="w-full max-w-lg rounded-lg border border-white/10 bg-[#0c0c0c] overflow-hidden shadow-2xl">
+            className="w-full max-w-lg rounded-lg border border-white/10 bg-[#101217] overflow-hidden shadow-2xl">
 
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06] bg-[#0a0a0a]">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06] bg-white/[0.02]">
               <div className="flex items-center gap-2">
                 <Flag className="w-4 h-4 text-primary" />
                 <span className="font-display font-black text-sm tracking-widest text-white">RACE SETUP</span>
@@ -86,11 +86,11 @@ export default function RaceSetupPanel({ open, onClose, onStart, isRunning, onSt
                   <Users className="w-3.5 h-3.5 text-white/20" />
                   <span className="text-[9px] font-display font-bold tracking-widest text-white/50 uppercase">Participants</span>
                 </div>
-                <CarBlock title="Our Car" color="#ef4444"
+                <CarBlock title="Our Car" color="#FF1E42"
                   name={cfg.our_name} number={cfg.our_number}
                   onName={set('our_name')} onNumber={set('our_number')}
                   namePh="Our driver" numPh="7" />
-                <CarBlock title="Competitor 1" color="#60a5fa"
+                <CarBlock title="Competitor 1" color="#FFB300"
                   name={cfg.comp1_name} number={cfg.comp1_number}
                   onName={set('comp1_name')} onNumber={set('comp1_number')}
                   namePh="Competitor 1" numPh="14" />
@@ -102,7 +102,7 @@ export default function RaceSetupPanel({ open, onClose, onStart, isRunning, onSt
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-between px-5 py-3 border-t border-white/[0.06] bg-[#0a0a0a]">
+            <div className="flex items-center justify-between px-5 py-3 border-t border-white/[0.06] bg-white/[0.02]">
               <span className="text-[8px] font-mono text-white/20">
                 {isRunning ? '● A race is currently running' : 'Ready to start'}
               </span>

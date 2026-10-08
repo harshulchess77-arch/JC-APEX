@@ -4,9 +4,9 @@ import { ArrowLeft, Trophy } from 'lucide-react';
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 
 const STANDINGS = [
-  { pos: 1, driver: 'JC',        team: 'JC APEX',     pts: 187, wins: 5, podiums: 7, dnfs: 1, best: 'P1', gap: '—',   color: '#ef4444' },
+  { pos: 1, driver: 'JC',        team: 'JC APEX',     pts: 187, wins: 5, podiums: 7, dnfs: 1, best: 'P1', gap: '—',   color: '#FF1E42' },
   { pos: 2, driver: 'M. Santos', team: 'Velocity RT', pts: 152, wins: 3, podiums: 5, dnfs: 2, best: 'P1', gap: '-35', color: '#22c55e' },
-  { pos: 3, driver: 'A. Park',   team: 'EV Racers',   pts: 118, wins: 1, podiums: 4, dnfs: 0, best: 'P2', gap: '-69', color: '#60a5fa' },
+  { pos: 3, driver: 'A. Park',   team: 'EV Racers',   pts: 118, wins: 1, podiums: 4, dnfs: 0, best: 'P2', gap: '-69', color: '#FFB300' },
   { pos: 4, driver: 'T. Obi',    team: 'Surge SC',    pts:  91, wins: 0, podiums: 2, dnfs: 3, best: 'P3', gap: '-96', color: '#a78bfa' },
   { pos: 5, driver: 'P. Reyes',  team: 'Kinetic R',   pts:  74, wins: 0, podiums: 1, dnfs: 1, best: 'P3', gap: '-113', color: '#eab308' },
   { pos: 6, driver: 'L. Kovak',  team: 'Zero G',      pts:  55, wins: 0, podiums: 0, dnfs: 2, best: 'P4', gap: '-132', color: '#22d3ee' },
@@ -27,15 +27,15 @@ const RACE_RESULTS = [
 
 const POS_STYLE = (p) => p === 'P1' ? 'text-yellow-400 font-bold' : p === 'P2' ? 'text-white/60' : p === 'P3' ? 'text-yellow-700' : p === 'DNF' ? 'text-primary' : 'text-white/25';
 
-const tip = { contentStyle: { background: '#111', border: '1px solid rgba(255,255,255,0.06)', fontSize: 10, borderRadius: 4 } };
+const tip = { contentStyle: { background: '#101217', border: '1px solid rgba(255,255,255,0.06)', fontSize: 10, borderRadius: 4 } };
 
 export default function ChampionshipStandings() {
   const navigate = useNavigate();
   const chartData = STANDINGS.map(s => ({ driver: s.driver, points: s.pts, color: s.color }));
 
   return (
-    <div className="min-h-screen bg-[#080808] flex flex-col">
-      <header className="flex items-center justify-between px-5 h-11 border-b border-white/[0.06] bg-[#0c0c0c] flex-shrink-0">
+    <div className="min-h-screen bg-[#08090C] flex flex-col">
+      <header className="flex items-center justify-between px-5 h-11 border-b border-white/[0.06] bg-[#101217] flex-shrink-0">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate('/pit')} className="text-white/20 hover:text-white/60 transition-colors">
             <ArrowLeft className="w-4 h-4" />
@@ -49,7 +49,7 @@ export default function ChampionshipStandings() {
 
       <div className="flex-1 overflow-auto p-4 space-y-4">
         {/* Points bar chart */}
-        <div className="rounded border border-white/[0.06] bg-[#0e0e0e] p-4">
+        <div className="rounded border border-white/[0.06] bg-[#101217] p-4">
           <div className="text-[9px] font-display font-bold tracking-widest text-white/40 uppercase mb-4">Championship Points</div>
           <ResponsiveContainer width="100%" height={140}>
             <BarChart data={chartData} barCategoryGap="30%">
@@ -57,7 +57,7 @@ export default function ChampionshipStandings() {
               <YAxis tick={{ fontSize: 9, fill: '#555' }} axisLine={false} tickLine={false} />
               <Tooltip {...tip} />
               <Bar dataKey="points" radius={[3, 3, 0, 0]}
-                fill="#ef4444"
+                fill="#FF1E42"
                 label={{ position: 'top', fontSize: 9, fill: '#888' }} />
             </BarChart>
           </ResponsiveContainer>
@@ -65,8 +65,8 @@ export default function ChampionshipStandings() {
 
         <div className="grid grid-cols-5 gap-4">
           {/* Main standings table */}
-          <div className="col-span-3 rounded border border-white/[0.06] bg-[#0e0e0e] overflow-hidden">
-            <div className="px-4 py-2.5 border-b border-white/[0.04] bg-[#0b0b0b]">
+          <div className="col-span-3 rounded border border-white/[0.06] bg-[#101217] overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-white/[0.04] bg-white/[0.02]">
               <span className="text-[9px] font-display font-bold tracking-widest text-white/40 uppercase">Driver Standings</span>
             </div>
             <table className="w-full text-[10px] font-mono">
@@ -103,8 +103,8 @@ export default function ChampionshipStandings() {
           </div>
 
           {/* Race-by-race results */}
-          <div className="col-span-2 rounded border border-white/[0.06] bg-[#0e0e0e] overflow-hidden">
-            <div className="px-4 py-2.5 border-b border-white/[0.04] bg-[#0b0b0b]">
+          <div className="col-span-2 rounded border border-white/[0.06] bg-[#101217] overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-white/[0.04] bg-white/[0.02]">
               <span className="text-[9px] font-display font-bold tracking-widest text-white/40 uppercase">Round-by-Round Results</span>
             </div>
             <div className="overflow-x-auto">

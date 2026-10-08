@@ -32,7 +32,7 @@ export default function DriverProfilesTab() {
     <div className="grid grid-cols-12 gap-3 h-full">
       {/* Driver List Roster (5 cols) */}
       <div className="col-span-4 flex flex-col gap-3">
-        <div className="rounded border border-white/[0.06] bg-[#0e0e0e] p-3 flex-1 flex flex-col">
+        <div className="rounded border border-white/[0.06] bg-[#101217] p-3 flex-1 flex flex-col">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <User className="w-3.5 h-3.5 text-primary" />
@@ -115,7 +115,7 @@ export default function DriverProfilesTab() {
       {/* Driver Detail Telemetry & Setup Dossier (8 cols) */}
       <div className="col-span-8 flex flex-col gap-3">
         {selectedDriver ? (
-          <div className="rounded border border-white/[0.06] bg-[#0e0e0e] p-4 flex-1 flex flex-col overflow-y-auto">
+          <div className="rounded border border-white/[0.06] bg-[#101217] p-4 flex-1 flex flex-col overflow-y-auto">
             {/* Header info */}
             <div className="flex items-start justify-between pb-3 border-b border-white/[0.06] mb-3">
               <div>
@@ -145,7 +145,7 @@ export default function DriverProfilesTab() {
               {[
                 { label: 'WINS', value: selectedDriver.wins || 0, color: '#ef4444' },
                 { label: 'PODIUMS', value: selectedDriver.podiums || 0, color: '#eab308' },
-                { label: 'RACES', value: selectedDriver.races_entered || 0, color: '#60a5fa' },
+                { label: 'RACES', value: selectedDriver.races_entered || 0, color: '#FFB300' },
                 { label: 'BEST FINISH', value: selectedDriver.best_finish || '—', color: '#22c55e' },
               ].map(s => (
                 <div key={s.label} className="p-2.5 rounded border border-white/[0.04] bg-white/[0.02] text-center">
@@ -198,7 +198,7 @@ export default function DriverProfilesTab() {
             </div>
           </div>
         ) : (
-          <div className="rounded border border-white/[0.06] bg-[#0e0e0e] p-8 flex-1 flex flex-col items-center justify-center text-center text-white/20">
+          <div className="rounded border border-white/[0.06] bg-[#101217] p-8 flex-1 flex flex-col items-center justify-center text-center text-white/20">
             <User className="w-10 h-10 opacity-20 mb-2" />
             <p className="text-xs font-mono">Select a driver on the left to inspect profiles and setup</p>
           </div>

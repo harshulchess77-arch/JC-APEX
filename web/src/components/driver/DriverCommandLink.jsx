@@ -19,7 +19,7 @@ export default function DriverCommandLink() {
     return () => unsub?.();
   }, []);
 
-  const clr = latest?.status === 'Acknowledged' ? '#22c55e' : latest?.status === 'Delivered' ? '#3b82f6' : '#eab308';
+  const clr = latest?.status === 'Acknowledged' ? '#10B981' : latest?.status === 'Delivered' ? '#FF1E42' : '#FFB300';
 
   return (
     <div className="border-t border-white/[0.04] pt-3">
