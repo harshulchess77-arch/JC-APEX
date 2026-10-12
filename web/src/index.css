@@ -154,3 +154,14 @@
   animation: scanline 8s linear infinite;
   pointer-events: none;
 }
+
+/* Tabular numerals for telemetry displays */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Monospace telemetry class */
+.telemetry-mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}

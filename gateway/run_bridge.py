@@ -85,7 +85,7 @@ class UnifiedTelemetryBridge:
     def _init_csv_backup(self):
         try:
             with open(self.csv_backup, 'w') as f:
-                f.write("timestamp,id,volts,amps,watts,speed_h,speed_g,latitude,longitude,rssi,snr\n")
+                f.write("timestamp,id,volts,amps,watts,speed_h,speed_g,latitude,longitude,sats,rssi,snr\n")
         except Exception as e:
             print(f"[BACKUP WARNING] Could not initialize CSV file: {e}")
 
@@ -217,6 +217,7 @@ class UnifiedTelemetryBridge:
                         speed_g = float(data.get("speed_g") or data.get("speed_gps", 0.0))
                         lat = float(data.get("lat") or data.get("latitude", 0.0))
                         lng = float(data.get("lng") or data.get("longitude", 0.0))
+                        sats = int(data.get("sats", 0))
                         rssi = int(data.get("rssi", -80))
                         snr = float(data.get("snr", 9.0))
                         iso_time = datetime.now(timezone.utc).isoformat()
@@ -241,7 +242,7 @@ class UnifiedTelemetryBridge:
                         try:
                             with open(self.csv_backup, 'a') as f:
                                 f.write(f"{iso_time},{packet_id},{volts:.2f},{amps:.2f},{watts:.2f},"
-                                        f"{speed_h:.2f},{speed_g:.2f},{lat:.6f},{lng:.6f},{rssi},{snr:.1f}\n")
+                                        f"{speed_h:.2f},{speed_g:.2f},{lat:.6f},{lng:.6f},{sats},{rssi},{snr:.1f}\n")
                         except Exception:
                             pass
 
@@ -254,6 +255,8 @@ class UnifiedTelemetryBridge:
                                 "watts": round(watts, 2),
                                 "speed_h": round(speed_h, 2),
                                 "speed_g": round(speed_g, 2),
+                                "latitude": round(lat, 6),
+                                "longitude": round(lng, 6),
                                 "rssi": rssi,
                                 "snr": round(snr, 1),
                                 "created_at": iso_time

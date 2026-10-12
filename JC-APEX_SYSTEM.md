@@ -247,6 +247,8 @@ GPS Module
 └── RX   ──► GPIO 15 (ESP32 TX)
 ```
 
+**Note:** GPIO 17 is used for GPS RX. The onboard OLED SDA has been moved to GPIO 41 to avoid conflict.
+
 ### 2.6 Onboard OLED Display
 
 **Specifications:**
@@ -274,7 +276,7 @@ GPS Module
 - Auto-calibration of WCS1600 zero-current baseline (100 samples @ boot)
 - Non-blocking GPS parsing via TinyGPS++
 - Hardware interrupt for Hall sensor (debounce: 3ms)
-- CSV payload format: `packet_id,amps,volts,watts,speed_hall,speed_gps`
+- CSV payload format: `packet_id,amps,volts,watts,speed_hall,speed_gps,lat,lon`
 
 **Calibration Constants:**
 ```cpp

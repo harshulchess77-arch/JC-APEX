@@ -149,7 +149,7 @@ void initOLED() {
   }
 }
 
-void updateOLED(uint32_t pktId, float volts, float amps, float watts, float speedH, float speedG, int txStatus) {
+void updateOLED(uint32_t pktId, float volts, float amps, float watts, float speedH, float speedG, uint8_t sats, int txStatus) {
   if (!oledReady) return;
   display.clearDisplay();
   display.setTextColor(SSD1306_WHITE);
@@ -181,7 +181,7 @@ void updateOLED(uint32_t pktId, float volts, float amps, float watts, float spee
   // Status & GPS Fix
   display.setCursor(0, 55);
   if (txStatus == RADIOLIB_ERR_NONE) {
-    display.printf("TX OK | GPS:%s", gps.location.isValid() ? "LOCK" : "SEARCH");
+    display.printf("TX OK | GPS:%s", sats > 0 ? "LOCK" : "SEARCH");
   } else {
     display.printf("TX ERR %d", txStatus);
   }
@@ -347,25 +347,33 @@ void loop() {
 
     speed_gps = gps.speed.isValid() ? (float)gps.speed.mph() : 0.0f;
 
-    char payload[96];
-    snprintf(payload, sizeof(payload), "%lu,%.2f,%.2f,%.2f,%.2f,%.2f",
+    // GPS position (send last-known-good position, never block loop)
+    float lat = gps.location.isValid() ? (float)gps.location.lat() : 0.0f;
+    float lon = gps.location.isValid() ? (float)gps.location.lng() : 0.0f;
+    uint8_t sats = gps.satellites.isValid() ? gps.satellites.value() : 0;
+
+    char payload[128];
+    snprintf(payload, sizeof(payload), "%lu,%.2f,%.2f,%.2f,%.2f,%.2f,%.6f,%.6f,%u",
              packetId,
              currentAmps,
              batteryVolts,
              powerWatts,
              currentSpeedHallMph,
-             speed_gps);
+             speed_gps,
+             lat,
+             lon,
+             sats);
 
     int state = radio.transmit(payload);
 
     if (state == RADIOLIB_ERR_NONE) {
-      Serial.printf("[TX #%lu] %5.1fV | %5.2fA | %6.1fW | Hall: %4.1fmph | GPS: %4.1fmph | OK\n",
-                    packetId, batteryVolts, currentAmps, powerWatts, currentSpeedHallMph, speed_gps);
+      Serial.printf("[TX #%lu] %5.1fV | %5.2fA | %6.1fW | Hall: %4.1fmph | GPS: %4.1fmph | Lat: %.6f Lon: %.6f Sats: %u | OK\n",
+                    packetId, batteryVolts, currentAmps, powerWatts, currentSpeedHallMph, speed_gps, lat, lon, sats);
     } else {
       Serial.printf("[TX #%lu] TX FAILED (Code %d)\n", packetId, state);
     }
 
-    updateOLED(packetId, batteryVolts, currentAmps, powerWatts, currentSpeedHallMph, speed_gps, state);
+    updateOLED(packetId, batteryVolts, currentAmps, powerWatts, currentSpeedHallMph, speed_gps, sats, state);
 
     packetId++;
   }

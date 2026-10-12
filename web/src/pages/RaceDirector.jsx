@@ -78,7 +78,7 @@ export default function RaceDirector() {
     { label: 'Voltage', ok: telemetry.voltage > 40, val: `${telemetry.voltage.toFixed(1)}V` },
     { label: 'Efficiency', ok: telemetry.efficiency > 60, val: `${telemetry.efficiency.toFixed(0)}%` },
     { label: 'Current', ok: telemetry.current < 22, val: `${telemetry.current.toFixed(1)}A` },
-    { label: 'Speed', ok: true, val: `${telemetry.speed.toFixed(0)} km/h` },
+    { label: 'Speed', ok: true, val: `${telemetry.speed.toFixed(0)} mph` },
   ];
 
   return (

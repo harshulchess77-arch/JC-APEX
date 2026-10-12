@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Radio, CheckCircle2, Clock } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { supabase } from '@/lib/supabaseClient';

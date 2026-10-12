@@ -37,6 +37,8 @@ CREATE TABLE public.telemetry_logs (
     watts NUMERIC(6,2) DEFAULT 0.00,
     speed_h NUMERIC(4,1) DEFAULT 0.0,
     speed_g NUMERIC(4,1) DEFAULT 0.0,
+    latitude NUMERIC(10,6) DEFAULT 0.000000,
+    longitude NUMERIC(10,6) DEFAULT 0.000000,
     rssi INT DEFAULT 0,
     snr NUMERIC(4,1) DEFAULT 0.0
 );
@@ -188,3 +190,29 @@ $$ LANGUAGE plpgsql;
 -- \d public.race_flags
 -- SELECT * FROM pg_publication_tables WHERE pubname = 'supabase_realtime';
 -- ============================================================================
+
+-- ============================================================================
+-- POST-MIGRATION: Add GPS columns to existing tables (idempotent)
+-- ============================================================================
+DO $$
+BEGIN
+    -- Add latitude column if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public'
+        AND table_name = 'telemetry_logs'
+        AND column_name = 'latitude'
+    ) THEN
+        ALTER TABLE public.telemetry_logs ADD COLUMN latitude NUMERIC(10,6) DEFAULT 0.000000;
+    END IF;
+
+    -- Add longitude column if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public'
+        AND table_name = 'telemetry_logs'
+        AND column_name = 'longitude'
+    ) THEN
+        ALTER TABLE public.telemetry_logs ADD COLUMN longitude NUMERIC(10,6) DEFAULT 0.000000;
+    END IF;
+END $$;

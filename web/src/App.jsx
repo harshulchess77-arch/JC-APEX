@@ -57,8 +57,10 @@ const AuthenticatedApp = () => {
           <Route path="/settings"               element={<AppSettings />} />
           <Route path="/live-comms"             element={<LiveComms />} />
           <Route path="/benchmarks"             element={<Benchmarks />} />
-          <Route path="*"                       element={<PageNotFound />} />
         </Route>
+
+        {/* ── PUBLIC 404 ROUTE (outside protected route) ── */}
+        <Route path="*" element={<PageNotFound />} />
       </Routes>
     </RaceEngineProvider>
   );

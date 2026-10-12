@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Activity, Zap, Battery, Gauge, Radio, Signal } from 'lucide-react';
+import { ArrowLeft, Activity, Zap, Battery, Gauge, Radio, Signal, Power } from 'lucide-react';
 import { AreaChart, Area, LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
 import { useTelemetry } from '../hooks/useTelemetry';
+import ErrorBoundary from '../ErrorBoundary';
 
 const tip = { contentStyle: { background: '#08090C', border: '1px solid rgba(255,255,255,0.06)', fontSize: 10, borderRadius: 4 }, labelStyle: { color: '#fff' } };
 
@@ -23,7 +24,7 @@ function LiveMetricPanel({ label, value, unit, color, max, data, dataKey }) {
         </div>
       </div>
       <div className="flex items-baseline gap-1 mb-2">
-        <span className="text-2xl font-display font-black" style={{ color, textShadow: `0 0 12px ${color}50` }}>{typeof safeValue === 'number' ? safeValue.toFixed(1) : safeValue}</span>
+        <span className="text-2xl font-display font-black tabular-nums" style={{ color, textShadow: `0 0 12px ${color}50` }}>{typeof safeValue === 'number' ? safeValue.toFixed(1) : safeValue}</span>
         <span className="text-[9px] font-mono text-white/20">{unit}</span>
       </div>
       <div className="h-1 bg-white/[0.04] rounded-full overflow-hidden mb-3">
@@ -62,11 +63,13 @@ function StatusBadge({ label, value, unit, color, icon: Icon }) {
 
 export default function TelemetryDashboard() {
   const navigate = useNavigate();
-  // LIVE HARDWARE MODE - will show actual data from your Heltec V3 hardware
-  const { telemetry, chartData, formatTime, power, estimatedLapsRemaining, thermalAlert, voltageAlert, hardwareData, isLive } = useTelemetry(
+  const [isDemoMode, setIsDemoMode] = useState(false);
+
+  // Toggle between demo and live hardware mode
+  const { telemetry, chartData, formatTime, power, estimatedLapsRemaining, thermalAlert, voltageAlert, hardwareData, isLive, isDemoMode: actualDemoMode } = useTelemetry(
     null,  // sessionId (null = listen to all sessions)
     true,  // enabled
-    { isDemoMode: false }  // FALSE = Live Hardware Mode (actual data from LoRa)
+    { isDemoMode }  // Controlled by toggle
   );
 
   // Defensive fallbacks for telemetry data
@@ -87,9 +90,14 @@ export default function TelemetryDashboard() {
     carbonDark: '#08090C',
   };
 
+  // Determine connection status
+  const connectionStatus = actualDemoMode ? 'DEMO' : (isLive ? 'LIVE' : 'DISCONNECTED');
+  const statusColor = actualDemoMode ? colors.signalYellow : (isLive ? colors.nominalGreen : colors.crimsonRed);
+
   return (
-    <div className="min-h-screen bg-[#08090C] flex flex-col">
-      <header className="flex items-center justify-between px-5 h-11 border-b border-white/[0.06] bg-[#08090C] flex-shrink-0">
+    <ErrorBoundary>
+      <div className="min-h-screen bg-[#08090C] flex flex-col">
+        <header className="flex items-center justify-between px-5 h-11 border-b border-white/[0.06] bg-[#08090C] flex-shrink-0">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate('/pit')} className="text-white/20 hover:text-white/60 transition-colors">
             <ArrowLeft className="w-4 h-4" />
@@ -99,11 +107,20 @@ export default function TelemetryDashboard() {
           <span className="font-display font-black text-sm tracking-widest text-white">TELEMETRY DASHBOARD</span>
         </div>
         <div className="flex items-center gap-3 text-[8px] font-mono">
-          <div className="flex items-center gap-1.5" style={{ color: colors.nominalGreen }}>
-            <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: colors.nominalGreen }} />
-            LIVE · 5Hz
+          {/* Connection Status Badge */}
+          <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded border`} style={{ backgroundColor: `${statusColor}15`, borderColor: `${statusColor}30`, color: statusColor }}>
+            <Power className="w-2.5 h-2.5" />
+            <span className="font-bold">{connectionStatus}</span>
+            {!actualDemoMode && <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: isLive ? colors.nominalGreen : colors.crimsonRed }} />}
           </div>
           <span className="text-white/20">{formatTime(safeTelemetry.raceTime ?? 0)}</span>
+          {/* Demo Mode Toggle */}
+          <button
+            onClick={() => setIsDemoMode(!isDemoMode)}
+            className={`px-2 py-0.5 rounded border text-[7px] font-bold transition-colors ${isDemoMode ? 'bg-primary/20 border-primary/40 text-primary' : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10'}`}
+          >
+            {isDemoMode ? 'DEMO ON' : 'DEMO OFF'}
+          </button>
           {/* Thermal Alert Badge */}
           <div className={`px-2 py-0.5 rounded text-[7px] font-bold ${thermalAlert?.flashing ? 'animate-pulse' : ''}`} style={{ backgroundColor: `${thermalAlert?.color}20`, color: thermalAlert?.color, border: `1px solid ${thermalAlert?.color}40` }}>
             TEMP: {thermalAlert?.level?.toUpperCase() ?? 'NOMINAL'}
@@ -221,5 +238,6 @@ export default function TelemetryDashboard() {
         </div>
       </div>
     </div>
+    </ErrorBoundary>
   );
 }

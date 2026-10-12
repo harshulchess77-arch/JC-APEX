@@ -46,10 +46,17 @@ export default function RoleSelect() {
   const [showPin, setShowPin] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [savedRole, setSavedRole] = useState(null);
 
   useEffect(() => {
     if (location.state?.unauthorized) {
       setError('Access to Driver HUD restricted. Requires Driver (DGATSA@55) or Race Director (RDGATSA@55) authentication.');
+    }
+    // Load saved role from localStorage
+    const saved = localStorage.getItem('jc-apex-role');
+    if (saved) {
+      setSavedRole(saved);
+      setSelected(saved);
     }
   }, [location.state]);
 
@@ -65,9 +72,20 @@ export default function RoleSelect() {
       return;
     }
 
+    // Save role to localStorage for quick resume
+    localStorage.setItem('jc-apex-role', selected);
+
     setLoading(true);
     await new Promise(r => setTimeout(r, 400));
     navigate(result.route || '/pit');
+  };
+
+  const handleResume = async () => {
+    if (!savedRole) return;
+    const result = login(savedRole, 'DEMO@55'); // Auto-enter demo mode for resume
+    if (result.success) {
+      navigate(result.route || '/pit');
+    }
   };
 
   const selectedRole = ROLES.find(r => r.id === selected);
@@ -194,7 +212,16 @@ export default function RoleSelect() {
         </button>
 
         {/* Demo / Field Presentation Mode Bypass */}
-        <div className="mt-3 flex items-center justify-center">
+        <div className="mt-3 flex items-center justify-center gap-2">
+          {savedRole && (
+            <button
+              type="button"
+              onClick={handleResume}
+              className="text-[10px] font-mono tracking-widest text-primary hover:text-primary/80 transition-colors uppercase py-1.5 px-3.5 rounded border border-primary/30 bg-primary/10 cursor-pointer"
+            >
+              ↺ Resume as {ROLES.find(r => r.id === savedRole)?.label}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => {
