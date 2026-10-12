@@ -57,7 +57,7 @@ function StatusCard({ label, value, unit, color, trend, chart, data, dataKey }) 
 export default function RaceDirector() {
   const navigate = useNavigate();
   const { logout } = usePasscodeAuth();
-  const { telemetry, flag, setFlag, oracleMessages, chartData, formatTime } = useTelemetry();
+  const { telemetry, flag, setFlag, oracleMessages, chartData, formatTime, isDemoMode, isLive } = useTelemetry();
   const { commandHistory, sendCommand: realtimeSendCommand } = useRealtimeTelemetry('director');
   const flagStyle = FLAG_STYLES[flag] || FLAG_STYLES.green;
 
@@ -101,9 +101,19 @@ export default function RaceDirector() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {/* Mode Status Chip */}
+            <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded border text-[9px] font-mono font-bold tracking-widest glass-chip ${
+              isDemoMode
+                ? 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+                : isLive
+                ? 'bg-green-500/10 border-green-500/30 text-green-400'
+                : 'bg-red-500/10 border-red-500/30 text-red-400'
+            }`}>
+              {isDemoMode ? 'DEMO' : isLive ? 'LIVE' : 'NO SIGNAL'}
+            </div>
             <div className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-xs font-mono text-green-500 font-bold">LIVE</span>
+              <span className="text-xs font-mono text-green-500 font-bold">GHOST-LINK™</span>
             </div>
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded border border-border bg-secondary/20 text-xs font-mono">
               <Timer className="w-3 h-3 text-muted-foreground" />

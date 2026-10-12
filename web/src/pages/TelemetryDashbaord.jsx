@@ -14,7 +14,7 @@ function LiveMetricPanel({ label, value, unit, color, max, data, dataKey }) {
   const safeDataKey = dataKey ?? 'value';
   const pct = Math.min((safeValue / safeMax) * 100, 100);
   return (
-    <div className="rounded border border-white/[0.06] bg-[#08090C] p-3">
+    <div className="rounded border border-white/[0.06] bg-[#08090C] glass p-3">
       <div className="flex items-center justify-between mb-1">
         <span className="text-[8px] font-mono tracking-widest text-white/20 uppercase">{label}</span>
         <div className="flex items-center gap-1">
@@ -62,11 +62,10 @@ function StatusBadge({ label, value, unit, color, icon: Icon }) {
 
 export default function TelemetryDashboard() {
   const navigate = useNavigate();
-  // LIVE HARDWARE MODE - will show actual data from your Heltec V3 hardware
-  const { telemetry, chartData, formatTime, power, estimatedLapsRemaining, thermalAlert, voltageAlert, hardwareData, isLive } = useTelemetry(
+  // Respects app's demo/live toggle from PasscodeAuthContext
+  const { telemetry, chartData, formatTime, power, estimatedLapsRemaining, thermalAlert, voltageAlert, hardwareData, isLive, isDemoMode } = useTelemetry(
     null,  // sessionId (null = listen to all sessions)
-    true,  // enabled
-    { isDemoMode: false }  // FALSE = Live Hardware Mode (actual data from LoRa)
+    true   // enabled
   );
 
   // Defensive fallbacks for telemetry data
@@ -99,9 +98,19 @@ export default function TelemetryDashboard() {
           <span className="font-display font-black text-sm tracking-widest text-white">TELEMETRY DASHBOARD</span>
         </div>
         <div className="flex items-center gap-3 text-[8px] font-mono">
+          {/* Mode Status Chip */}
+          <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded border text-[8px] font-mono font-bold tracking-widest ${
+            isDemoMode
+              ? 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+              : isLive
+              ? 'bg-green-500/10 border-green-500/30 text-green-400'
+              : 'bg-red-500/10 border-red-500/30 text-red-400'
+          }`}>
+            {isDemoMode ? 'DEMO' : isLive ? 'LIVE' : 'NO SIGNAL'}
+          </div>
           <div className="flex items-center gap-1.5" style={{ color: colors.nominalGreen }}>
             <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: colors.nominalGreen }} />
-            LIVE · 5Hz
+            5Hz
           </div>
           <span className="text-white/20">{formatTime(safeTelemetry.raceTime ?? 0)}</span>
           {/* Thermal Alert Badge */}
@@ -140,7 +149,7 @@ export default function TelemetryDashboard() {
         </div>
         {/* Power and Completed Laps */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="rounded border border-white/[0.06] bg-[#101217] p-4">
+          <div className="rounded border border-white/[0.06] bg-[#101217] glass p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[8px] font-mono tracking-widest text-white/30 uppercase">Power Output</span>
               <div className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: colors.crimsonRed }} />
@@ -151,7 +160,7 @@ export default function TelemetryDashboard() {
             </div>
             <div className="text-[7px] font-mono text-white/20 mt-1">V × I = {(safeTelemetry.voltage ?? 0).toFixed(1)}V × {(safeTelemetry.current ?? 0).toFixed(1)}A</div>
           </div>
-          <div className="rounded border border-white/[0.06] bg-[#101217] p-4">
+          <div className="rounded border border-white/[0.06] bg-[#101217] glass p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[8px] font-mono tracking-widest text-white/30 uppercase">Completed Laps</span>
               <div className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: colors.nominalGreen }} />

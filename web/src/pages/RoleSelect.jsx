@@ -116,7 +116,7 @@ export default function RoleSelect() {
                   onClick={() => setSelected(role.id)}
                   className={`w-full flex items-center gap-4 p-4 rounded border transition-all duration-200 ${
                     isActive
-                      ? `${role.activeBorder} ${role.activeBg}`
+                      ? `${role.activeBorder} ${role.activeBg} glass`
                       : 'border-border bg-card/20 hover:bg-secondary/20'
                   }`}
                 >

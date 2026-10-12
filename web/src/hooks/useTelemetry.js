@@ -26,16 +26,18 @@ const ZERO_TELEMETRY = {
   speed_hall: 0.00,
   speed_gps: 0.00,
   battery: 0,
-  temp: 0,
+  temp: null,
   voltage: 0.00,
   current: 0.00,
   power: 0.00,
   latitude: 0.00,
   longitude: 0.00,
   efficiency: 0,
-  lap: 0,
+  lap: null,
   totalLaps: 30,
-  raceTime: 0,
+  raceTime: null,
+  gpsFix: false,
+  sats: 0,
 };
 
 export function useTelemetry(sessionId = null, enabled = true, options = {}) {
@@ -122,6 +124,8 @@ export function useTelemetry(sessionId = null, enabled = true, options = {}) {
       lap: prev.lap || 3.4,
       totalLaps: 30,
       raceTime: prev.raceTime || 142,
+      gpsFix: true,
+      sats: 12,
     }));
 
     // 5 Hz Loop (200ms update rate)
@@ -200,6 +204,8 @@ export function useTelemetry(sessionId = null, enabled = true, options = {}) {
         efficiency: mockSpeed > 0 ? Math.min(96, Math.max(68, Math.round(76 + (mockSpeed / 30.0) * 14))) : 0,
         latitude: mockLat,
         longitude: mockLng,
+        gpsFix: true,
+        sats: 10 + Math.floor(Math.sin(t * 0.05) * 2),
         lap: prev.lap + (mockSpeed / (0.25 * 3600 * 5)),
         totalLaps: 30,
         raceTime: prev.raceTime + (t % 5 === 0 ? 1 : 0),
@@ -265,8 +271,10 @@ export function useTelemetry(sessionId = null, enabled = true, options = {}) {
     setIsLive(false);
 
     // Subscribe to Supabase Realtime postgres_changes on telemetry_logs
+    // Use unique channel name per instance to avoid collisions
+    const channelName = `live-hardware-telemetry-${sessionId || 'all'}-${Date.now()}`;
     const channel = supabase
-      .channel('live-hardware-telemetry')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -276,7 +284,9 @@ export function useTelemetry(sessionId = null, enabled = true, options = {}) {
           filter: sessionId ? `session_id=eq.${sessionId}` : undefined,
         },
         (payload) => {
-          console.log('[useTelemetry] Received payload:', payload);
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[useTelemetry] Received payload:', payload);
+          }
           const data = payload.new;
 
           // Parse live hardware fields with defensive numeric fallbacks
@@ -292,8 +302,10 @@ export function useTelemetry(sessionId = null, enabled = true, options = {}) {
           const speedVal = speedHallVal > 0 ? speedHallVal : speedGpsVal;
           const latVal = Number(data?.latitude ?? data?.lat ?? 0);
           const lngVal = Number(data?.longitude ?? data?.lng ?? 0);
+          const satsVal = Number(data?.sats ?? 0);
           const rssiVal = Number(data?.rssi ?? -80);
           const snrVal = Number(data?.snr ?? 0);
+          const gpsFix = latVal !== 0 && lngVal !== 0 && Math.abs(latVal) <= 90 && Math.abs(lngVal) <= 180 && satsVal >= 4;
 
           // 48V Li-ion pack estimation: ~42.0V (0%) to ~54.6V (100%)
           let batteryPct = 0;
@@ -310,6 +322,8 @@ export function useTelemetry(sessionId = null, enabled = true, options = {}) {
             speed: speedVal,
             latitude: latVal,
             longitude: lngVal,
+            sats: satsVal,
+            gpsFix: gpsFix,
             rssi: rssiVal,
             snr: snrVal,
             packetId: data?.packet_id ?? data?.id,
@@ -318,6 +332,7 @@ export function useTelemetry(sessionId = null, enabled = true, options = {}) {
           });
 
           // Live incoming hardware updates metrics from baseline
+          // Note: lap, temp, raceTime are not available from hardware - show null for "--" display
           setTelemetry(prev => ({
             ...prev,
             current: currentVal,
@@ -328,8 +343,13 @@ export function useTelemetry(sessionId = null, enabled = true, options = {}) {
             speed_gps: speedGpsVal,
             latitude: latVal,
             longitude: lngVal,
+            gpsFix: gpsFix,
+            sats: satsVal,
             battery: batteryPct > 0 ? batteryPct : (voltageVal === 0 ? 0 : prev.battery),
             efficiency: speedVal > 0 ? Math.min(100, Math.round((speedVal / 35.0) * 100)) : 0,
+            temp: null, // Not from hardware
+            lap: null,  // Not from hardware
+            raceTime: null, // Not from hardware
           }));
 
           setActiveSessionId(data?.session_id);
@@ -364,9 +384,13 @@ export function useTelemetry(sessionId = null, enabled = true, options = {}) {
         }
       )
       .subscribe((status) => {
-        console.log('[useTelemetry] Supabase Realtime subscription status:', status);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[useTelemetry] Supabase Realtime subscription status:', status);
+        }
         if (status === 'SUBSCRIBED') {
-          console.log('[useTelemetry] Successfully subscribed to telemetry_logs table');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[useTelemetry] Successfully subscribed to telemetry_logs table');
+          }
           setIsConnected(true);
         } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
           console.error('[useTelemetry] Subscription closed or error:', status);
@@ -391,15 +415,20 @@ export function useTelemetry(sessionId = null, enabled = true, options = {}) {
     const watchdog = setInterval(() => {
       if (!lastUpdate) {
         setIsLive(false);
-        setTelemetry(prev => ({
-          ...prev,
-          current: 0.00,
-          voltage: 0.00,
-          power: 0.00,
-          speed: 0.00,
-          speed_hall: 0.00,
-          speed_gps: 0.00,
-        }));
+        setTelemetry(prev => {
+          if (prev.current === 0.00 && prev.voltage === 0.00 && prev.speed === 0.00) {
+            return prev; // Already zero, skip re-render
+          }
+          return {
+            ...prev,
+            current: 0.00,
+            voltage: 0.00,
+            power: 0.00,
+            speed: 0.00,
+            speed_hall: 0.00,
+            speed_gps: 0.00,
+          };
+        });
         return;
       }
 
@@ -408,15 +437,20 @@ export function useTelemetry(sessionId = null, enabled = true, options = {}) {
       setIsLive(alive);
 
       if (!alive) {
-        setTelemetry(prev => ({
-          ...prev,
-          current: 0.00,
-          voltage: 0.00,
-          power: 0.00,
-          speed: 0.00,
-          speed_hall: 0.00,
-          speed_gps: 0.00,
-        }));
+        setTelemetry(prev => {
+          if (prev.current === 0.00 && prev.voltage === 0.00 && prev.speed === 0.00) {
+            return prev; // Already zero, skip re-render
+          }
+          return {
+            ...prev,
+            current: 0.00,
+            voltage: 0.00,
+            power: 0.00,
+            speed: 0.00,
+            speed_hall: 0.00,
+            speed_gps: 0.00,
+          };
+        });
       }
     }, 1000);
 
@@ -521,5 +555,7 @@ export function useTelemetry(sessionId = null, enabled = true, options = {}) {
     fetchAvailableSessions,
     isMock: isDemoMode,
     isDemoMode,
+    gpsFix: telemetry?.gpsFix ?? false,
+    sats: telemetry?.sats ?? 0,
   };
 }

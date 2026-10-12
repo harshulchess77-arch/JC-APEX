@@ -130,7 +130,7 @@ const STRATEGY_MODAL_CFG = {
 export default function DriverHUD() {
   const navigate = useNavigate();
   const { logout } = usePasscodeAuth();
-  const { telemetry, flag: localFlag, oracleMessages, commsMessages, formatTime, targetPace, signalLost, lastPacketTime } = useTelemetry();
+  const { telemetry, flag: localFlag, oracleMessages, commsMessages, formatTime, targetPace, signalLost, lastPacketTime, isDemoMode, isLive } = useTelemetry();
   const {
     incomingCommands,
     sendAck,
@@ -351,7 +351,7 @@ export default function DriverHUD() {
 
       {/* Top bar - hidden in focus mode */}
       {!focusMode && (
-        <div className="flex-shrink-0 flex items-center justify-between px-4 h-9 border-b border-white/[0.06] bg-[#08090C]">
+        <div className="flex-shrink-0 flex items-center justify-between px-4 h-9 border-b border-white/[0.06] bg-[#08090C] glass">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
               <div className="w-4 h-4 bg-primary rounded-sm flex items-center justify-center">
@@ -375,6 +375,16 @@ export default function DriverHUD() {
             </AnimatePresence>
           </div>
           <div className="flex items-center gap-4 text-[8px] font-mono">
+            {/* Mode Status Chip */}
+            <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded border text-[8px] font-mono font-bold tracking-widest ${
+              isDemoMode
+                ? 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+                : isLive
+                ? 'bg-green-500/10 border-green-500/30 text-green-400'
+                : 'bg-red-500/10 border-red-500/30 text-red-400'
+            }`}>
+              {isDemoMode ? 'DEMO' : isLive ? 'LIVE' : 'NO SIGNAL'}
+            </div>
             <span className="text-white/25">LAP <span className="text-white/60 font-bold">#{Math.floor(safeLap)}</span></span>
             <span className="text-[#FF1E42] font-bold tracking-widest">{timeString}</span>
             <span style={{ color: battColor }} className="font-bold">{safeBattery < 40 ? 'CONSERVE' : safeBattery > 60 ? 'BALANCED' : 'NOMINAL'}</span>

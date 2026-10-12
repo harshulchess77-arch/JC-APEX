@@ -164,7 +164,9 @@ export function useRealtimeTelemetry(role = 'driver') {
 
       channel.subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          console.log('Supabase Realtime connected');
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Supabase Realtime connected');
+          }
           setConnectionMode('supabase');
           channelRef.current = channel;
         }
@@ -260,7 +262,9 @@ export function useRealtimeTelemetry(role = 'driver') {
         console.error('[sendCommand] Supabase send error:', error);
       }
     } else {
-      console.log('Mock mode - command logged locally:', command);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Mock mode - command logged locally:', command);
+      }
     }
 
     return command;
@@ -315,7 +319,9 @@ export function useRealtimeTelemetry(role = 'driver') {
         console.error('[sendAck] Supabase send error:', error);
       }
     } else {
-      console.log('Mock mode - acknowledgment logged locally:', ack);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Mock mode - acknowledgment logged locally:', ack);
+      }
     }
   }, [connectionMode]);
 
@@ -355,7 +361,9 @@ export function useRealtimeTelemetry(role = 'driver') {
         console.error('[broadcastFlagChange] Supabase send error:', error);
       }
     } else {
-      console.log('Mock mode - flag change logged locally:', flag);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Mock mode - flag change logged locally:', flag);
+      }
     }
   }, [connectionMode]);
 
@@ -373,7 +381,9 @@ export function useRealtimeTelemetry(role = 'driver') {
         console.error('[broadcastStrategyChange] Supabase send error:', error);
       }
     } else {
-      console.log('Mock mode - strategy change logged locally:', modeUpper);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Mock mode - strategy change logged locally:', modeUpper);
+      }
     }
   }, [connectionMode]);
 

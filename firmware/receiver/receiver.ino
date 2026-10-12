@@ -37,9 +37,9 @@
 #define LORA_NRST           12
 #define LORA_BUSY           13
 
-// Onboard OLED Display Pins
-#define OLED_SDA            17
-#define OLED_SCL            18
+// Onboard OLED Display Pins (Heltec V3 onboard OLED uses GPIO17/18)
+#define OLED_SDA            17  // Restored to board's real OLED SDA pin
+#define OLED_SCL            18  // Restored to board's real OLED SCL pin
 #define OLED_RST            21
 #define VEXT_PIN            36
 #define SCREEN_WIDTH        128
@@ -199,8 +199,11 @@ void loop() {
       float watts = 0.0f;
       float speedHall = 0.0f;
       float speedGps = 0.0f;
+      float latitude = 0.0f;
+      float longitude = 0.0f;
+      uint8_t sats = 0;
 
-      // Safe CSV tokenization
+      // Safe CSV tokenization (tolerant of old 6/8/9-field packets)
       char buffer[128];
       incomingStr.toCharArray(buffer, sizeof(buffer));
 
@@ -215,6 +218,9 @@ void loop() {
           case 3: watts = atof(token); break;
           case 4: speedHall = atof(token); break;
           case 5: speedGps = atof(token); break;
+          case 6: latitude = atof(token); break;  // New field
+          case 7: longitude = atof(token); break; // New field
+          case 8: sats = (uint8_t)atoi(token); break; // New field
           default: break;
         }
         token = strtok(NULL, ",");
@@ -222,6 +228,7 @@ void loop() {
       }
 
       // Auto-scale voltage if transmitter is still sending uncalibrated ~8.9V
+      // CAUTION: Range guard assumes voltages in this range are uncalibrated TX readings
       if (volts > 0.5f && volts < 15.0f) {
         volts = volts * UNCALIBRATED_TX_VOLTAGE_FACTOR;
       }
@@ -230,13 +237,17 @@ void loop() {
       watts = volts * amps;
 
       // Output JSON for Python bridge compatibility
-      StaticJsonDocument<256> doc;
+      // Bumped to 384 to accommodate lat/lng/sats with 6-decimal precision
+      StaticJsonDocument<384> doc;
       doc["id"] = packetId;
       doc["amps"] = amps;
       doc["volts"] = volts;
       doc["watts"] = watts;
       doc["speed_h"] = speedHall;
       doc["speed_g"] = speedGps;
+      doc["lat"] = String(latitude, 6);  // 6-decimal precision for GPS
+      doc["lng"] = String(longitude, 6); // 6-decimal precision for GPS
+      doc["sats"] = sats;
       doc["rssi"] = rssi;
       doc["snr"] = snr;
       serializeJson(doc, Serial);

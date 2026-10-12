@@ -42,7 +42,7 @@ export default function HeroSection() {
       <div className="absolute top-1/4 left-1/4 w-[300px] h-[300px] bg-primary/3 rounded-full blur-[100px] pointer-events-none" />
 
       {/* Top nav bar */}
-      <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 py-4 border-b border-border/50">
+      <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 py-4 border-b border-border/50 glass">
         <div className="flex items-center gap-3">
           <div className="w-2 h-2 rounded-full bg-primary animate-pulse-red" />
           <span className="text-xs font-mono tracking-[0.3em] text-muted-foreground/60 uppercase">JC APEX RACE INTELLIGENCE</span>
@@ -133,7 +133,7 @@ export default function HeroSection() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
-          className="mx-auto max-w-sm bg-card/40 border border-border/60 rounded p-4 mb-10 text-left"
+          className="mx-auto max-w-sm bg-card/40 border border-border/60 rounded p-4 mb-10 text-left glass"
         >
           {bootLines.map((line, i) => (
             <motion.div
@@ -160,7 +160,7 @@ export default function HeroSection() {
           {stats.map((stat) => (
             <div
               key={stat.label}
-              className="relative p-4 rounded border border-border bg-card/40 backdrop-blur-sm group hover:border-[#FF1E42]/30 transition-colors"
+              className="relative p-4 rounded border border-border bg-card/40 backdrop-blur-sm group hover:border-[#FF1E42]/30 transition-colors glass"
             >
               <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#FF1E42]/30 to-transparent" />
               <div className="text-2xl md:text-3xl font-mono font-bold text-white mb-1">

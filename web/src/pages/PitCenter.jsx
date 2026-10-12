@@ -69,7 +69,7 @@ export default function PitCenter() {
     telemetry, strategy, setStrategy,
     flag, setFlag, oracleMessages, commsMessages,
     chartData, sendCommand: legacySendCommand, formatTime, estimatedLapsRemaining, signalLost, lastPacketTime,
-    sessionId, telemetryHistory
+    sessionId, telemetryHistory, isDemoMode, isLive
   } = useTelemetry();
   const {
     connectionMode: realtimeConnectionMode,
@@ -133,7 +133,7 @@ export default function PitCenter() {
     <div className="min-h-screen bg-[#08090C] flex flex-col overflow-hidden">
 
       {/* ─── HEADER ─── */}
-      <header className="flex-shrink-0 flex items-center justify-between px-4 h-10 border-b border-white/[0.06] bg-[#101217]">
+      <header className="flex-shrink-0 flex items-center justify-between px-4 h-10 border-b border-white/[0.06] bg-[#101217] glass">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <div className="w-5 h-5 bg-primary rounded flex items-center justify-center">
@@ -164,6 +164,16 @@ export default function PitCenter() {
           </button>
         </div>
         <div className="flex items-center gap-4">
+          {/* Mode Status Chip */}
+          <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded border text-[9px] font-mono font-bold tracking-widest ${
+            isDemoMode
+              ? 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+              : isLive
+              ? 'bg-green-500/10 border-green-500/30 text-green-400'
+              : 'bg-red-500/10 border-red-500/30 text-red-400'
+          }`}>
+            {isDemoMode ? 'DEMO' : isLive ? 'LIVE' : 'NO SIGNAL'}
+          </div>
           <div className="flex items-center gap-1.5">
             <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
             <span className="text-[9px] font-mono text-green-400 tracking-widest">GHOST-LINK™ ACTIVE</span>

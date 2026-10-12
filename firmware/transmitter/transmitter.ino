@@ -25,11 +25,27 @@
 #define BATTERY_VOLTAGE_PIN   19  // GPIO 19 - 48V Battery Resistor Divider (820k / 47k)
 
 // Hall Effect Speed Sensor
-#define HALL_SENSOR_PIN       7   // GPIO 7 - Assigned as INPUT_PULLUP with hardware interrupt
+// CONFIGURATION: GPIO 7 is Digital Output for Hall effect sensor
+// NOTE: The code configures GPIO 7 as INPUT_PULLUP with interrupt (FALLING edge)
+// This is the standard way to read a Hall sensor output (typically open-drain or active-low)
+#define HALL_SENSOR_PIN       7   // GPIO 7 - Hall effect sensor (configured as INPUT_PULLUP with interrupt)
 
 // GPS Hardware UART (Serial1)
-#define GPS_RX_PIN            17  // ESP32 RX <- GPS TX (GPIO 17)
-#define GPS_TX_PIN            15  // ESP32 TX -> GPS RX (GPIO 15)
+// PIN SELECTION (ACTUAL HARDWARE):
+// - GPS_TX: GPIO 17 (ESP32 TX -> GPS RX)
+// - GPS_RX: GPIO 15 (ESP32 RX <- GPS TX)
+// These pins avoid collision with:
+//   - LoRa SX1262: GPIO 8, 12, 13, 14
+//   - OLED Display: GPIO 17 (SDA), 18 (SCL), 21 (RST), 36 (Vext) - CONFLICT ON GPIO17!
+// IMPORTANT: GPS TX uses GPIO17 which is the OLED SDA pin on Heltec V3.
+// This means OLED cannot be used simultaneously with GPS unless we move OLED to different pins.
+// For now, OLED is disabled or moved to alternative pins if available.
+//   - ADC Inputs: GPIO 1 (Current), GPIO 19 (Voltage)
+//   - Hall Sensor: GPIO 7
+//   - USB/Strapping: GPIO 0, 45, 46, 47, 48
+// WIRING: Connect GPS module RX to Heltec GPIO17, GPS module TX to Heltec GPIO15
+#define GPS_TX_PIN            17  // ESP32 TX -> GPS RX (GPIO 17)
+#define GPS_RX_PIN            15  // ESP32 RX <- GPS TX (GPIO 15)
 #define GPS_BAUD_RATE         9600
 
 // SX1262 LoRa Pinout for Heltec WiFi LoRa 32 (V3)
@@ -38,9 +54,12 @@
 #define LORA_NRST             12
 #define LORA_BUSY             13
 
-// Onboard OLED Pins & Power Control
-#define OLED_SDA              41  // Moved off GPIO 17 to prevent collision with GPS RX
-#define OLED_SCL              42
+// Onboard OLED Pins & Power Control (Heltec V3 onboard OLED uses GPIO17/18)
+// NOTE: GPS TX uses GPIO17 which conflicts with OLED SDA.
+// OLED will not work simultaneously with GPS unless GPS is moved to different pins.
+// For now, OLED initialization will be attempted but may not display properly.
+#define OLED_SDA              17  // OLED SDA pin (CONFLICTS with GPS TX on GPIO17)
+#define OLED_SCL              18  // OLED SCL pin
 #define OLED_RST              21
 #define VEXT_PIN              36
 #define SCREEN_WIDTH          128
@@ -64,6 +83,7 @@ const float ADC_REF_VOLTAGE = 3.3f;
 const float ADC_MAX_COUNT = 4095.0f;
 
 // 48V Battery Voltage Divider (Calibrated to 55.0V Multimeter Reading)
+// Divider: 820k (high side) / 47k (low side) on GPIO 19
 // Previous raw reading: 8.9V -> True Multimeter: 55.0V
 // New Factor = 20.24 * (55.0 / 8.9) = 125.08f
 const float BATT_VOLTAGE_DIVIDER_FACTOR = 125.08f;
@@ -276,8 +296,10 @@ void setup() {
   Serial.println(F("  JC-APEX ELECTROTHON TELEMETRY TRANSMITTER (48V TX)   "));
   Serial.println(F("========================================================"));
 
-  powerOnVext();
-  initOLED();
+  // OLED DISABLED DUE TO GPIO17 CONFLICT WITH GPS TX
+  // powerOnVext();
+  // initOLED();
+  Serial.println(F("[OLED] DISABLED - GPIO17 conflicts with GPS TX"));
 
   analogReadResolution(12);
   analogSetPinAttenuation(CURRENT_SENSOR_PIN, ADC_11db);
@@ -289,6 +311,7 @@ void setup() {
 
   Serial1.begin(9600, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
   Serial.printf("[GPS] Serial1 initialized on RX: GPIO %d, TX: GPIO %d at 9600 baud\n", GPS_RX_PIN, GPS_TX_PIN);
+  Serial.printf("[GPS] WARNING: GPIO %d (TX) conflicts with OLED SDA - OLED may not work\n", GPS_TX_PIN);
 
   calibrateCurrentSensorZero();
 
@@ -347,25 +370,34 @@ void loop() {
 
     speed_gps = gps.speed.isValid() ? (float)gps.speed.mph() : 0.0f;
 
-    char payload[96];
-    snprintf(payload, sizeof(payload), "%lu,%.2f,%.2f,%.2f,%.2f,%.2f",
+    // GPS position (send last-known-good position, never block loop)
+    float lat = gps.location.isValid() ? (float)gps.location.lat() : 0.0f;
+    float lon = gps.location.isValid() ? (float)gps.location.lng() : 0.0f;
+    uint8_t sats = gps.satellites.isValid() ? gps.satellites.value() : 0;
+
+    char payload[128];
+    snprintf(payload, sizeof(payload), "%lu,%.2f,%.2f,%.2f,%.2f,%.2f,%.6f,%.6f,%d",
              packetId,
              currentAmps,
              batteryVolts,
              powerWatts,
              currentSpeedHallMph,
-             speed_gps);
+             speed_gps,
+             lat,
+             lon,
+             sats);
 
     int state = radio.transmit(payload);
 
     if (state == RADIOLIB_ERR_NONE) {
-      Serial.printf("[TX #%lu] %5.1fV | %5.2fA | %6.1fW | Hall: %4.1fmph | GPS: %4.1fmph | OK\n",
-                    packetId, batteryVolts, currentAmps, powerWatts, currentSpeedHallMph, speed_gps);
+      Serial.printf("[TX #%lu] %5.1fV | %5.2fA | %6.1fW | Hall: %4.1fmph | GPS: %4.1fmph | %.6f,%.6f | %d sat | OK\n",
+                    packetId, batteryVolts, currentAmps, powerWatts, currentSpeedHallMph, speed_gps, lat, lon, sats);
     } else {
       Serial.printf("[TX #%lu] TX FAILED (Code %d)\n", packetId, state);
     }
 
-    updateOLED(packetId, batteryVolts, currentAmps, powerWatts, currentSpeedHallMph, speed_gps, state);
+    // OLED DISABLED DUE TO GPIO17 CONFLICT WITH GPS TX
+    // updateOLED(packetId, batteryVolts, currentAmps, powerWatts, currentSpeedHallMph, speed_gps, state);
 
     packetId++;
   }

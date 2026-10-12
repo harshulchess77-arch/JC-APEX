@@ -37,6 +37,8 @@ CREATE TABLE public.telemetry_logs (
     watts NUMERIC(6,2) DEFAULT 0.00,
     speed_h NUMERIC(4,1) DEFAULT 0.0,
     speed_g NUMERIC(4,1) DEFAULT 0.0,
+    latitude NUMERIC(10,6) DEFAULT 0.000000,
+    longitude NUMERIC(10,6) DEFAULT 0.000000,
     rssi INT DEFAULT 0,
     snr NUMERIC(4,1) DEFAULT 0.0
 );
@@ -45,6 +47,36 @@ CREATE TABLE public.telemetry_logs (
 CREATE INDEX idx_telemetry_logs_session_id ON public.telemetry_logs(session_id);
 CREATE INDEX idx_telemetry_logs_created_at ON public.telemetry_logs(created_at DESC);
 CREATE INDEX idx_telemetry_logs_session_time ON public.telemetry_logs(session_id, created_at DESC);
+
+-- ============================================================================
+-- MIGRATION: Add GPS columns if they don't exist (for existing databases)
+-- ============================================================================
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'telemetry_logs'
+        AND column_name = 'latitude'
+    ) THEN
+        ALTER TABLE public.telemetry_logs ADD COLUMN latitude NUMERIC(10,6) DEFAULT 0.000000;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'telemetry_logs'
+        AND column_name = 'longitude'
+    ) THEN
+        ALTER TABLE public.telemetry_logs ADD COLUMN longitude NUMERIC(10,6) DEFAULT 0.000000;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'telemetry_logs'
+        AND column_name = 'sats'
+    ) THEN
+        ALTER TABLE public.telemetry_logs ADD COLUMN sats INT DEFAULT 0;
+    END IF;
+END $$;
 
 -- ============================================================================
 -- STEP 3: CREATE COMMANDS TABLE (pit-to-driver command history)
