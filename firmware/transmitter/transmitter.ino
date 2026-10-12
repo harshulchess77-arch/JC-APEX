@@ -28,8 +28,10 @@
 #define HALL_SENSOR_PIN       7   // GPIO 7 - Assigned as INPUT_PULLUP with hardware interrupt
 
 // GPS Hardware UART (Serial1)
-#define GPS_RX_PIN            17  // ESP32 RX <- GPS TX (GPIO 17)
-#define GPS_TX_PIN            15  // ESP32 TX -> GPS RX (GPIO 15)
+// NOTE: VERIFY ON HARDWARE - GPS moved to GPIO 10/11 to free up OLED pins
+// Official Heltec V3 OLED pins: SDA=GPIO17, SCL=GPIO18, RST=GPIO21, Vext=GPIO36
+#define GPS_RX_PIN            10  // ESP32 RX <- GPS TX (GPIO 10 - free GPIO)
+#define GPS_TX_PIN            11  // ESP32 TX -> GPS RX (GPIO 11 - free GPIO)
 #define GPS_BAUD_RATE         9600
 
 // SX1262 LoRa Pinout for Heltec WiFi LoRa 32 (V3)
@@ -38,11 +40,11 @@
 #define LORA_NRST             12
 #define LORA_BUSY             13
 
-// Onboard OLED Pins & Power Control
-#define OLED_SDA              41  // Moved off GPIO 17 to prevent collision with GPS RX
-#define OLED_SCL              42
-#define OLED_RST              21
-#define VEXT_PIN              36
+// Onboard OLED Pins & Power Control (restored to official Heltec V3 pinout)
+#define OLED_SDA              17  // Official Heltec V3 OLED SDA
+#define OLED_SCL              18  // Official Heltec V3 OLED SCL
+#define OLED_RST              21  // Official Heltec V3 OLED RST
+#define VEXT_PIN              36  // Official Heltec V3 Vext control
 #define SCREEN_WIDTH          128
 #define SCREEN_HEIGHT         64
 

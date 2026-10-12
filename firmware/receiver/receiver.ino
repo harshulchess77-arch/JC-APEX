@@ -37,11 +37,11 @@
 #define LORA_NRST           12
 #define LORA_BUSY           13
 
-// Onboard OLED Display Pins (moved off GPIO 17 to match transmitter)
-#define OLED_SDA            41
-#define OLED_SCL            42
-#define OLED_RST            21
-#define VEXT_PIN            36
+// Onboard OLED Display Pins (restored to official Heltec V3 pinout)
+#define OLED_SDA            17  // Official Heltec V3 OLED SDA
+#define OLED_SCL            18  // Official Heltec V3 OLED SCL
+#define OLED_RST            21  // Official Heltec V3 OLED RST
+#define VEXT_PIN            36  // Official Heltec V3 Vext control
 #define SCREEN_WIDTH        128
 #define SCREEN_HEIGHT       64
 

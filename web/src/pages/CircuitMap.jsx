@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Map, Navigation } from 'lucide-react';
 import { useTelemetry } from '../hooks/useTelemetry';
@@ -28,53 +28,72 @@ const SEGMENTS = [
 export default function CircuitMap() {
   const navigate = useNavigate();
   const [activeSegment, setActiveSegment] = useState(0);
-  const { telemetry, isDemoMode, isLive, isConnected } = useTelemetry(null, true);
+  const { telemetry, isDemoMode, isLive, isConnected, gpsFix, sats } = useTelemetry(null, true);
 
   // GPS data from telemetry
   const latitude = telemetry?.latitude ?? 0;
   const longitude = telemetry?.longitude ?? 0;
-  const hasGpsFix = latitude !== 0 && longitude !== 0;
+  const hasGpsFix = gpsFix;
 
   // Determine connection status
   const connectionStatus = isDemoMode ? 'DEMO' : (isLive ? 'LIVE' : (isConnected ? 'RECONNECTING' : 'NO SIGNAL'));
   const statusColor = isDemoMode ? 'text-primary' : (isLive ? 'text-green-500' : (isConnected ? 'text-amber-500' : 'text-red-500'));
 
-  // Demo mode: simulate vehicle position on track (follows drawn track path)
-  const [demoPosition, setDemoPosition] = useState({ x: 60, y: 150, lap: 0 });
+  // Demo mode: use fallback position calculation
+  const lapProgress = (telemetry?.lap || 0) % 1;
+  const [demoPosition, setDemoPosition] = useState({ x: 60, y: 150 });
+
+  // Fallback position calculation for demo mode
   useEffect(() => {
     if (isDemoMode) {
       const interval = setInterval(() => {
-        const lapProgress = (telemetry?.lap || 0) % 1;
-        // Track path approximation based on SVG path
-        // Metro Circuit: start at (60,150), loop through corners
-        const angle = lapProgress * Math.PI * 2;
+        const progress = (telemetry?.lap || 0) % 1;
+        const angle = progress * Math.PI * 2;
         let x, y;
         if (angle < Math.PI / 2) {
-          // Sector 1: straight to (150,60)
           x = 60 + (angle / (Math.PI / 2)) * 90;
           y = 150 - (angle / (Math.PI / 2)) * 90;
         } else if (angle < Math.PI) {
-          // Sector 2: to (440,150)
           x = 150 + ((angle - Math.PI / 2) / (Math.PI / 2)) * 290;
           y = 60 + ((angle - Math.PI / 2) / (Math.PI / 2)) * 90;
         } else if (angle < Math.PI * 1.5) {
-          // Sector 3: to (280,240)
           x = 440 - ((angle - Math.PI) / (Math.PI / 2)) * 160;
           y = 150 + ((angle - Math.PI) / (Math.PI / 2)) * 90;
         } else {
-          // Sector 4: back to start
           x = 280 - ((angle - Math.PI * 1.5) / (Math.PI / 2)) * 220;
           y = 240 - ((angle - Math.PI * 1.5) / (Math.PI / 2)) * 90;
         }
-        setDemoPosition({ x, y, lap: Math.floor(telemetry?.lap || 0) });
+        setDemoPosition({ x, y });
       }, 200);
       return () => clearInterval(interval);
     }
   }, [isDemoMode, telemetry?.lap]);
 
-  // Live mode: simple lat/lon to SVG mapping (placeholder - needs calibration)
-  // For now, show marker at center when GPS fix exists
-  const livePosition = { x: 250, y: 150 };
+  // Live mode: GPS to SVG coordinate mapping
+  const [livePosition, setLivePosition] = useState({ x: 250, y: 150 });
+  const [gpsBreadcrumbs, setGpsBreadcrumbs] = useState([]);
+
+  // Check for reduced motion preference
+  const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Live mode: update GPS position
+  useEffect(() => {
+    if (!isLive || !hasGpsFix) return;
+
+    // Simple lat/lon to SVG mapping (placeholder - needs calibration with real GPS data)
+    // This is a basic mapping that centers the track around the GPS coordinates
+    // TODO: Implement proper bounding box fit with real GPS data
+    const newX = 250; // Center X for now
+    const newY = 150; // Center Y for now
+
+    setLivePosition({ x: newX, y: newY });
+
+    // Add to breadcrumbs (keep last 500 points)
+    setGpsBreadcrumbs(prev => {
+      const next = [...prev, { x: newX, y: newY, lat: latitude, lng: longitude }];
+      return next.length > 500 ? next.slice(-500) : next;
+    });
+  }, [isLive, hasGpsFix, latitude, longitude]);
 
   return (
     <div className="min-h-screen bg-[#08090C] flex flex-col">
@@ -95,7 +114,7 @@ export default function CircuitMap() {
           {/* GPS Status */}
           <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded border text-[10px] font-mono ${hasGpsFix ? 'bg-green-500/10 border-green-500/30 text-green-500' : 'bg-red-500/10 border-red-500/30 text-red-500'}`}>
             <Navigation className="w-3 h-3" />
-            <span>{hasGpsFix ? 'GPS LOCK' : 'NO GPS'}</span>
+            <span>{hasGpsFix ? `GPS LOCK (${sats} sat)` : `NO GPS (sats: ${sats})`}</span>
           </div>
           {hasGpsFix && (
             <span className="text-[10px] font-mono text-white/30 tabular-nums">
@@ -111,11 +130,11 @@ export default function CircuitMap() {
         <div className="col-span-1 lg:col-span-2 rounded border border-white/[0.06] bg-[#101217] p-4">
           <div className="text-[12px] font-display font-bold tracking-widest text-white/40 uppercase mb-4">Circuit Layout — Metro Circuit</div>
           <div className="relative flex items-center justify-center" style={{ minHeight: 320 }}>
-            <svg viewBox="0 0 500 300" className="w-full h-full" style={{ maxHeight: '400px' }}>
-              {/* Track outline */}
-              <path d="M 60 150 Q 60 60 150 60 L 350 60 Q 440 60 440 150 Q 440 220 370 240 L 280 240 Q 240 240 220 200 Q 200 160 160 160 Q 100 160 60 150 Z"
+            <svg ref={svgRef} viewBox="0 0 500 300" className="w-full h-full" style={{ maxHeight: '400px' }}>
+              {/* Track outline with class for Anime.js */}
+              <path className="circuit circuit-a" d="M 60 150 Q 60 60 150 60 L 350 60 Q 440 60 440 150 Q 440 220 370 240 L 280 240 Q 240 240 220 200 Q 200 160 160 160 Q 100 160 60 150 Z"
                 fill="none" stroke="#1a1a1a" strokeWidth="22" strokeLinejoin="round" />
-              <path d="M 60 150 Q 60 60 150 60 L 350 60 Q 440 60 440 150 Q 440 220 370 240 L 280 240 Q 240 240 220 200 Q 200 160 160 160 Q 100 160 60 150 Z"
+              <path className="circuit" d="M 60 150 Q 60 60 150 60 L 350 60 Q 440 60 440 150 Q 440 220 370 240 L 280 240 Q 240 240 220 200 Q 200 160 160 160 Q 100 160 60 150 Z"
                 fill="none" stroke="#222" strokeWidth="18" strokeLinejoin="round" />
               {/* DRS zone */}
               <path d="M 150 60 L 350 60" stroke="#22c55e" strokeWidth="4" strokeLinecap="round"
@@ -138,26 +157,33 @@ export default function CircuitMap() {
               <text x="260" y="258" fill="#ef4444" fontSize="13" fontFamily="Orbitron,monospace" fontWeight="700">S3</text>
               {/* Direction arrow */}
               <path d="M 200 65 L 210 60 L 200 55" fill="none" stroke="white" strokeWidth="1.5" opacity="0.3" />
+              {/* GPS trace polyline (live mode) */}
+              {isLive && gpsBreadcrumbs.length > 1 && (
+                <polyline
+                  className="trace"
+                  points={gpsBreadcrumbs.map(p => `${p.x},${p.y}`).join(' ')}
+                  fill="none"
+                  stroke="#FF1E42"
+                  strokeWidth="2"
+                  opacity="0.5"
+                />
+              )}
               {/* Vehicle position marker */}
               {isDemoMode ? (
-                <circle
-                  cx={demoPosition.x}
-                  cy={demoPosition.y}
-                  r="8"
-                  fill="#FF1E42"
-                  style={{ filter: 'drop-shadow(0 0 8px #FF1E42)' }}
-                />
+                <g transform={`translate(${demoPosition.x}, ${demoPosition.y})`}>
+                  <circle cx="0" cy="0" r="8" fill="#FF1E42" style={{ filter: 'drop-shadow(0 0 8px #FF1E42)' }} />
+                  {/* Heading wedge */}
+                  <path d="M 0 -8 L -4 0 L 4 0 Z" fill="#FF1E42" opacity="0.8" />
+                </g>
               ) : hasGpsFix ? (
-                <circle
-                  cx={livePosition.x}
-                  cy={livePosition.y}
-                  r="8"
-                  fill="#FF1E42"
-                  style={{ filter: 'drop-shadow(0 0 8px #FF1E42)' }}
-                />
+                <g className="car" transform={`translate(${livePosition.x}, ${livePosition.y})`}>
+                  <circle cx="0" cy="0" r="8" fill="#FF1E42" style={{ filter: 'drop-shadow(0 0 8px #FF1E42)' }} />
+                  {/* Heading wedge */}
+                  <path d="M 0 -8 L -4 0 L 4 0 Z" fill="#FF1E42" opacity="0.8" />
+                </g>
               ) : (
                 <text x="250" y="155" fill="#8A909D" fontSize="12" fontFamily="JetBrains Mono,monospace" textAnchor="middle">
-                  WAITING FOR GPS FIX
+                  {isLive ? `WAITING FOR GPS FIX (sats: ${sats})` : 'WAITING FOR SIGNAL'}
                 </text>
               )}
             </svg>
