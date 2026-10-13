@@ -173,17 +173,17 @@ export default function DriverHUD() {
 
   // Defensive fallbacks for rapid 5 Hz telemetry updates
   const safeTelemetry = telemetry ?? {};
-  const safeSpeed = safeTelemetry.speed ?? 0;
-  const safeBattery = safeTelemetry.battery ?? 0;
-  const safeTemp = safeTelemetry.temp ?? 0;
-  const safeVoltage = safeTelemetry.voltage ?? 0;
-  const safeCurrent = safeTelemetry.current ?? 0;
-  const safePower = safeTelemetry.power ?? (safeCurrent * safeVoltage);
-  const safeEfficiency = safeTelemetry.efficiency ?? 0;
-  const safeLap = safeTelemetry.lap ?? 0;
-  const safeRaceTime = safeTelemetry.raceTime ?? 0;
-  const safeSpeedHall = safeTelemetry.speed_hall ?? safeSpeed;
-  const safeSpeedGps = safeTelemetry.speed_gps ?? safeSpeed;
+  const safeSpeed = (safeTelemetry.speed ?? 0) || 0;
+  const safeBattery = (safeTelemetry.battery ?? 0) || 0;
+  const safeTemp = (safeTelemetry.temp ?? 0) || 0;
+  const safeVoltage = (safeTelemetry.voltage ?? 0) || 0;
+  const safeCurrent = (safeTelemetry.current ?? 0) || 0;
+  const safePower = (safeTelemetry.power ?? (safeCurrent * safeVoltage)) || 0;
+  const safeEfficiency = (safeTelemetry.efficiency ?? 0) || 0;
+  const safeLap = (safeTelemetry.lap ?? 0) || 0;
+  const safeRaceTime = (safeTelemetry.raceTime ?? 0) || 0;
+  const safeSpeedHall = (safeTelemetry.speed_hall ?? safeSpeed) || 0;
+  const safeSpeedGps = (safeTelemetry.speed_gps ?? safeSpeed) || 0;
 
   // Broadcast driver status periodically
   useEffect(() => {

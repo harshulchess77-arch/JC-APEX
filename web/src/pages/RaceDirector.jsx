@@ -73,12 +73,12 @@ export default function RaceDirector() {
   };
 
   const systemHealth = [
-    { label: 'Battery', ok: telemetry.battery > 25, val: `${telemetry.battery.toFixed(0)}%` },
-    { label: 'Thermal', ok: telemetry.temp < 58, val: `${telemetry.temp.toFixed(0)}°C` },
-    { label: 'Voltage', ok: telemetry.voltage > 40, val: `${telemetry.voltage.toFixed(1)}V` },
-    { label: 'Efficiency', ok: telemetry.efficiency > 60, val: `${telemetry.efficiency.toFixed(0)}%` },
-    { label: 'Current', ok: telemetry.current < 22, val: `${telemetry.current.toFixed(1)}A` },
-    { label: 'Speed', ok: true, val: `${telemetry.speed.toFixed(0)} km/h` },
+    { label: 'Battery', ok: (telemetry.battery ?? 0) > 25, val: `${(telemetry.battery ?? 0).toFixed(0)}%` },
+    { label: 'Thermal', ok: (telemetry.temp ?? 0) < 58, val: `${(telemetry.temp ?? 0).toFixed(0)}°C` },
+    { label: 'Voltage', ok: (telemetry.voltage ?? 0) > 40, val: `${(telemetry.voltage ?? 0).toFixed(1)}V` },
+    { label: 'Efficiency', ok: (telemetry.efficiency ?? 0) > 60, val: `${(telemetry.efficiency ?? 0).toFixed(0)}%` },
+    { label: 'Current', ok: (telemetry.current ?? 0) < 22, val: `${(telemetry.current ?? 0).toFixed(1)}A` },
+    { label: 'Speed', ok: true, val: `${(telemetry.speed ?? 0).toFixed(0)} km/h` },
   ];
 
   return (
@@ -281,7 +281,7 @@ export default function RaceDirector() {
               </div>
               <div className="flex justify-between mt-1.5 text-[10px] font-mono text-muted-foreground/30">
                 <span>START</span>
-                <span>{((telemetry.lap / telemetry.totalLaps) * 100).toFixed(0)}% complete</span>
+                <span>{telemetry.totalLaps > 0 ? ((telemetry.lap ?? 0) / telemetry.totalLaps * 100).toFixed(0) : 0}% complete</span>
                 <span>FINISH</span>
               </div>
             </div>

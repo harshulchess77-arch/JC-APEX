@@ -212,16 +212,16 @@ export default function PitCenter() {
 
       {/* ─── METRICS STRIP ─── */}
       <div className="flex-shrink-0 flex items-center border-b border-white/[0.06] bg-[#101217] overflow-x-auto">
-        <MetricChip label="BATTERY" value={`${telemetry.battery.toFixed(1)}%`} color={battColor} />
-        <MetricChip label="TEMP" value={`${telemetry.temp.toFixed(1)}°C`} color={tempColor} />
-        <MetricChip label="EFFICIENCY" value={`${telemetry.efficiency.toFixed(0)}%`} color="#10B981" />
-        <MetricChip label="POWER (WATTS)" value={`${(telemetry.power != null ? telemetry.power : telemetry.current * telemetry.voltage).toFixed(0)}W`} color="#FF1E42" />
-        <MetricChip label="48V VOLTAGE" value={`${telemetry.voltage.toFixed(1)}V`} color="#FF1E42" />
-        <MetricChip label="CURRENT" value={`${telemetry.current.toFixed(1)}A`} color="#FFB300" />
-        <MetricChip label="HALL SPEED" value={`${(telemetry.speed_hall != null ? telemetry.speed_hall : telemetry.speed).toFixed(1)}`} color="#FF1E42" />
-        <MetricChip label="GPS SPEED" value={`${(telemetry.speed_gps != null ? telemetry.speed_gps : telemetry.speed).toFixed(1)}`} color="#FFB300" />
-        <MetricChip label="COMPLETED LAPS" value={`#${Math.floor(telemetry.lap)}`} color="#10B981" />
-        <MetricChip label="DISTANCE" value={`${(Math.floor(telemetry.lap) * 0.25).toFixed(2)}mi`} color="#FF1E42" />
+        <MetricChip label="BATTERY" value={`${(telemetry.battery ?? 0).toFixed(1)}%`} color={battColor} />
+        <MetricChip label="TEMP" value={`${(telemetry.temp ?? 0).toFixed(1)}°C`} color={tempColor} />
+        <MetricChip label="EFFICIENCY" value={`${(telemetry.efficiency ?? 0).toFixed(0)}%`} color="#10B981" />
+        <MetricChip label="POWER (WATTS)" value={`${((telemetry.power != null ? telemetry.power : (telemetry.current ?? 0) * (telemetry.voltage ?? 0)).toFixed(0))}W`} color="#FF1E42" />
+        <MetricChip label="48V VOLTAGE" value={`${(telemetry.voltage ?? 0).toFixed(1)}V`} color="#FF1E42" />
+        <MetricChip label="CURRENT" value={`${(telemetry.current ?? 0).toFixed(1)}A`} color="#FFB300" />
+        <MetricChip label="HALL SPEED" value={`${((telemetry.speed_hall != null ? telemetry.speed_hall : telemetry.speed) ?? 0).toFixed(1)}`} color="#FF1E42" />
+        <MetricChip label="GPS SPEED" value={`${((telemetry.speed_gps != null ? telemetry.speed_gps : telemetry.speed) ?? 0).toFixed(1)}`} color="#FFB300" />
+        <MetricChip label="COMPLETED LAPS" value={`#${Math.floor(telemetry.lap ?? 0)}`} color="#10B981" />
+        <MetricChip label="DISTANCE" value={`${(Math.floor(telemetry.lap ?? 0) * 0.25).toFixed(2)}mi`} color="#FF1E42" />
         <div className="ml-auto flex-shrink-0 px-3">
           <span className={`text-[9px] font-mono font-bold px-2.5 py-1 rounded border tracking-widest ${
             flag === 'green'  ? 'border-green-500/40 text-green-400 bg-green-500/10' :
