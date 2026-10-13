@@ -295,10 +295,10 @@ export default function OverviewTab({ telemetry, chartData, oracleMessages }) {
         {/* System Health */}
         <div className="rounded border border-white/[0.06] bg-[#101217] p-3">
           <div className="text-[9px] font-display font-bold tracking-widest text-white/50 uppercase mb-3">System Health</div>
-          <HealthBar label="48V Battery Pack" pct={battHealth}      color="#10B981" valueStr={`${telemetry.battery.toFixed(1)}% (${telemetry.voltage.toFixed(1)}V)`} />
-          <HealthBar label="Pack Voltage"     pct={voltageHealth}   color="#FF1E42" valueStr={`${telemetry.voltage.toFixed(1)}V`} />
-          <HealthBar label="Thermal Headroom" pct={100 - thermalRisk} color="#FFB300" valueStr={`${telemetry.temp.toFixed(1)}°C`} />
-          <HealthBar label="Drive Efficiency" pct={telemetry.efficiency} color="#10B981" valueStr={`${telemetry.efficiency.toFixed(0)}%`} />
+          <HealthBar label="48V Battery Pack" pct={battHealth}      color="#10B981" valueStr={`${(telemetry.battery ?? 0).toFixed(1)}% (${(telemetry.voltage ?? 0).toFixed(1)}V)`} />
+          <HealthBar label="Pack Voltage"     pct={voltageHealth}   color="#FF1E42" valueStr={`${(telemetry.voltage ?? 0).toFixed(1)}V`} />
+          <HealthBar label="Thermal Headroom" pct={100 - thermalRisk} color="#FFB300" valueStr={`${(telemetry.temp ?? 0).toFixed(1)}°C`} />
+          <HealthBar label="Drive Efficiency" pct={telemetry.efficiency ?? 0} color="#10B981" valueStr={`${(telemetry.efficiency ?? 0).toFixed(0)}%`} />
           <div className="mt-3 pt-2 border-t border-white/[0.04]">
             <div className="flex items-center gap-1.5 text-[9px] font-mono">
               <div className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />

@@ -52,10 +52,10 @@ export default function LiveComms() {
           <div>
             <div className="text-[7px] font-mono tracking-widest text-white/30 uppercase mb-2">Live Telemetry</div>
             {[
-              { label: 'SPEED',   value: `${telemetry.speed.toFixed(1)} mph`, color: '#FF1E42' },
-              { label: 'BATTERY', value: `${telemetry.battery.toFixed(1)}%`,  color: '#10B981' },
-              { label: 'TEMP',    value: `${telemetry.temp.toFixed(1)}°C`,    color: '#FFB300' },
-              { label: 'LAPS',    value: `#${Math.floor(telemetry.lap)}`,     color: '#FF1E42' },
+              { label: 'SPEED',   value: `${(telemetry.speed ?? 0).toFixed(1)} mph`, color: '#FF1E42' },
+              { label: 'BATTERY', value: `${(telemetry.battery ?? 0).toFixed(1)}%`,  color: '#10B981' },
+              { label: 'TEMP',    value: `${(telemetry.temp ?? 0).toFixed(1)}°C`,    color: '#FFB300' },
+              { label: 'LAPS',    value: `#${Math.floor(telemetry.lap ?? 0)}`,     color: '#FF1E42' },
             ].map(m => (
               <div key={m.label} className="flex items-center justify-between py-1.5 border-b border-white/[0.03]">
                 <span className="text-[8px] font-mono text-white/30">{m.label}</span>

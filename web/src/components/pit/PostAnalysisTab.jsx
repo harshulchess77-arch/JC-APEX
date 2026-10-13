@@ -32,10 +32,10 @@ export default function PostAnalysisTab({ telemetry, chartData, sessionId, telem
   const dist = (laps * 0.25).toFixed(2);
 
   const HEALTH = [
-    { label: 'Battery System',   value: `${telemetry.battery.toFixed(1)}%`,    pct: telemetry.battery,               color: '#10B981' },
-    { label: 'Thermal Headroom', value: `${telemetry.temp.toFixed(1)}°C`,      pct: (telemetry.temp / 80) * 100,     color: '#FFB300' },
-    { label: 'Drive Efficiency', value: `${telemetry.efficiency.toFixed(1)}%`, pct: telemetry.efficiency,            color: '#10B981' },
-    { label: 'Voltage Stability',value: `${telemetry.voltage.toFixed(1)}V`,    pct: (telemetry.voltage / 50) * 100, color: '#FF1E42' },
+    { label: 'Battery System',   value: `${(telemetry.battery ?? 0).toFixed(1)}%`,    pct: telemetry.battery ?? 0,               color: '#10B981' },
+    { label: 'Thermal Headroom', value: `${(telemetry.temp ?? 0).toFixed(1)}°C`,      pct: (telemetry.temp ?? 0) / 80 * 100,     color: '#FFB300' },
+    { label: 'Drive Efficiency', value: `${(telemetry.efficiency ?? 0).toFixed(1)}%`, pct: telemetry.efficiency ?? 0,            color: '#10B981' },
+    { label: 'Voltage Stability',value: `${(telemetry.voltage ?? 0).toFixed(1)}V`,    pct: (telemetry.voltage ?? 0) / 50 * 100, color: '#FF1E42' },
   ];
 
   return (
@@ -47,7 +47,7 @@ export default function PostAnalysisTab({ telemetry, chartData, sessionId, telem
           {[
             { label: 'COMPLETED LAPS', value: laps,          color: '#FF1E42' },
             { label: 'PEAK SPEED',     value: `${peakSpeed} mph`, color: '#FF1E42' },
-            { label: 'BATTERY STATE',  value: `${telemetry.battery.toFixed(1)}%`, color: '#10B981' },
+            { label: 'BATTERY STATE',  value: `${(telemetry.battery ?? 0).toFixed(1)}%`, color: '#10B981' },
             { label: 'AVG EFFICIENCY', value: `${avgEff}%`,  color: '#10B981' },
             { label: 'TOTAL DISTANCE', value: `${dist} mi`,  color: '#FF1E42' },
           ].map(s => (

@@ -41,10 +41,10 @@ export default function Benchmarks() {
 
   const benchmarks = LEAGUE_BENCHMARKS.map(b => ({
     ...b,
-    current: b.metric === 'Speed' ? +telemetry.speed.toFixed(1) :
-             b.metric === 'Efficiency' ? +telemetry.efficiency.toFixed(1) :
-             b.metric === 'Battery Mgmt' ? +telemetry.battery.toFixed(1) :
-             b.metric === 'Thermal Ctrl' ? Math.max(0, 100 - (telemetry.temp / 75) * 100).toFixed(1) :
+    current: b.metric === 'Speed' ? +(telemetry.speed ?? 0).toFixed(1) :
+             b.metric === 'Efficiency' ? +(telemetry.efficiency ?? 0).toFixed(1) :
+             b.metric === 'Battery Mgmt' ? +(telemetry.battery ?? 0).toFixed(1) :
+             b.metric === 'Thermal Ctrl' ? Math.max(0, 100 - ((telemetry.temp ?? 0) / 75) * 100).toFixed(1) :
              b.metric === 'Consistency' ? 88 : b.metric === 'Lap Time' ? 3.95 : 80,
   }));
 

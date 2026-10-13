@@ -251,9 +251,9 @@ export default function PitCenter() {
               <span className="text-[8px] font-mono tracking-widest text-white/20 uppercase">Energy Cell</span>
             </div>
             <div className="flex items-baseline gap-1 mb-1.5">
-              <span className="text-3xl font-display font-black" style={{ color: battColor }}>{telemetry.battery.toFixed(0)}</span>
+              <span className="text-3xl font-display font-black" style={{ color: battColor }}>{(telemetry.battery ?? 0).toFixed(0)}</span>
               <span className="text-white/25 font-mono text-xs">%</span>
-              <span className="ml-auto text-sm font-display font-bold text-[#FF1E42]">{telemetry.voltage.toFixed(1)}V</span>
+              <span className="ml-auto text-sm font-display font-bold text-[#FF1E42]">{(telemetry.voltage ?? 0).toFixed(1)}V</span>
             </div>
             <BatteryBar battery={telemetry.battery} />
             <div className="flex items-center justify-between mt-1.5 text-[8px] font-mono text-white/20">
@@ -427,10 +427,10 @@ export default function PitCenter() {
           <span className="text-white/15">GHOST-LINK™</span>
         </div>
         <div className="flex items-center gap-4 text-[8px] font-mono text-white/20">
-          <span>BATT <span style={{ color: battColor }}>{telemetry.battery.toFixed(1)}%</span></span>
-          <span>TEMP <span style={{ color: tempColor }}>{telemetry.temp.toFixed(1)}°C</span></span>
-          <span>EFF <span className="text-[#10B981]">{telemetry.efficiency.toFixed(0)}%</span></span>
-          <span>V <span className="text-[#FF1E42]">{telemetry.voltage.toFixed(1)}V</span></span>
+          <span>BATT <span style={{ color: battColor }}>{(telemetry.battery ?? 0).toFixed(1)}%</span></span>
+          <span>TEMP <span style={{ color: tempColor }}>{(telemetry.temp ?? 0).toFixed(1)}°C</span></span>
+          <span>EFF <span className="text-[#10B981]">{(telemetry.efficiency ?? 0).toFixed(0)}%</span></span>
+          <span>V <span className="text-[#FF1E42]">{(telemetry.voltage ?? 0).toFixed(1)}V</span></span>
         </div>
       </div>
     </div>

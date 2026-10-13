@@ -13,23 +13,24 @@ const INITIAL_TELEMETRY = {
 };
 
 function generateOracleMessage(telemetry) {
+  if (!telemetry) return null;
   if (telemetry.battery < 15) {
-    return { text: `CRITICAL: Battery at ${telemetry.battery.toFixed(0)}%. Emergency conserve mode required.`, severity: 'critical' };
+    return { text: `CRITICAL: Battery at ${(telemetry.battery ?? 0).toFixed(0)}%. Emergency conserve mode required.`, severity: 'critical' };
   }
   if (telemetry.temp > 62) {
-    return { text: `Motor temp ${telemetry.temp.toFixed(0)}°C — approaching 75°C critical. Reduce load immediately.`, severity: 'critical' };
+    return { text: `Motor temp ${(telemetry.temp ?? 0).toFixed(0)}°C — approaching 75°C critical. Reduce load immediately.`, severity: 'critical' };
   }
   if (telemetry.battery < 30) {
-    return { text: `Battery at ${telemetry.battery.toFixed(0)}%. Deficit projected. Switch to CONSERVE mode.`, severity: 'warning' };
+    return { text: `Battery at ${(telemetry.battery ?? 0).toFixed(0)}%. Deficit projected. Switch to CONSERVE mode.`, severity: 'warning' };
   }
   if (telemetry.temp > 50) {
-    return { text: `Thermal gradient elevated: ${telemetry.temp.toFixed(1)}°C. Monitor rise rate.`, severity: 'warning' };
+    return { text: `Thermal gradient elevated: ${(telemetry.temp ?? 0).toFixed(1)}°C. Monitor rise rate.`, severity: 'warning' };
   }
   if (telemetry.efficiency > 82) {
-    return { text: `Systems nominal. Efficiency ${telemetry.efficiency.toFixed(0)}%. Push window is open.`, severity: 'nominal' };
+    return { text: `Systems nominal. Efficiency ${(telemetry.efficiency ?? 0).toFixed(0)}%. Push window is open.`, severity: 'nominal' };
   }
   if (telemetry.voltage < 39) {
-    return { text: `Voltage sag detected: ${telemetry.voltage.toFixed(1)}V. Cell load is high.`, severity: 'warning' };
+    return { text: `Voltage sag detected: ${(telemetry.voltage ?? 0).toFixed(1)}V. Cell load is high.`, severity: 'warning' };
   }
   return null;
 }
@@ -97,11 +98,11 @@ export function useTelemetry() {
     setChartData(prev => {
       const point = {
         time: formatTime(telemetry.raceTime),
-        speed: +telemetry.speed.toFixed(1),
-        battery: +telemetry.battery.toFixed(1),
-        temp: +telemetry.temp.toFixed(1),
-        efficiency: +telemetry.efficiency.toFixed(1),
-        voltage: +telemetry.voltage.toFixed(2),
+        speed: +(telemetry.speed ?? 0).toFixed(1),
+        battery: +(telemetry.battery ?? 0).toFixed(1),
+        temp: +(telemetry.temp ?? 0).toFixed(1),
+        efficiency: +(telemetry.efficiency ?? 0).toFixed(1),
+        voltage: +(telemetry.voltage ?? 0).toFixed(2),
       };
       const next = [...prev, point];
       return next.length > 200 ? next.slice(-200) : next;
