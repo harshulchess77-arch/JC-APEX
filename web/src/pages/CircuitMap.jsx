@@ -173,13 +173,16 @@ export default function CircuitMap() {
 
   // Fit GPS bounding box into SVG viewBox (500x300)
   const fitGpsToSvg = (lat, lon, bounds) => {
-    if (!bounds) return { x: 250, y: 150 };
+    if (!bounds || lat == null || lon == null) return { x: 250, y: 150 };
     const padding = 20;
     const svgWidth = 500 - padding * 2;
     const svgHeight = 300 - padding * 2;
     
-    const x = ((lon - bounds.minLon) / (bounds.maxLon - bounds.minLon)) * svgWidth + padding;
-    const y = svgHeight - ((lat - bounds.minLat) / (bounds.maxLat - bounds.minLat)) * svgHeight + padding;
+    const lonRange = bounds.maxLon - bounds.minLon || 0.001; // Avoid division by zero
+    const latRange = bounds.maxLat - bounds.minLat || 0.001;
+    
+    const x = ((lon - bounds.minLon) / lonRange) * svgWidth + padding;
+    const y = svgHeight - ((lat - bounds.minLat) / latRange) * svgHeight + padding;
     
     return { x, y };
   };
@@ -199,16 +202,16 @@ export default function CircuitMap() {
 
   // Calculate live position from GPS
   const bounds = getGpsBounds();
-  const livePosition = hasGpsFix && bounds ? fitGpsToSvg(latitude, longitude, bounds) : { x: 250, y: 150 };
+  const livePosition = hasGpsFix && bounds && latitude != null && longitude != null ? fitGpsToSvg(latitude, longitude, bounds) : { x: 250, y: 150 };
 
   // Add GPS breadcrumbs when new valid data arrives
   useEffect(() => {
-    if (hasGpsFix && isLive && !isDemoMode) {
+    if (hasGpsFix && isLive && !isDemoMode && latitude != null && longitude != null) {
       const now = Date.now();
       setGpsBreadcrumbs(prev => {
         // Add new point if moved > 1 meter from last point
         const lastPoint = prev[prev.length - 1];
-        const distance = lastPoint 
+        const distance = lastPoint && lastPoint.lat != null && lastPoint.lon != null
           ? Math.sqrt(Math.pow(latitude - lastPoint.lat, 2) + Math.pow(longitude - lastPoint.lon, 2)) * 111000 
           : 1000; // Approximate 1 degree ≈ 111km
         
@@ -228,13 +231,17 @@ export default function CircuitMap() {
       if (!bounds) return;
       
       // Simple path generation: connect points in order
-      const points = gpsBreadcrumbs.map(p => {
-        const pos = fitGpsToSvg(p.lat, p.lon, bounds);
-        return `${pos.x.toFixed(1)},${pos.y.toFixed(1)}`;
-      });
+      const points = gpsBreadcrumbs
+        .filter(p => p.lat != null && p.lon != null)
+        .map(p => {
+          const pos = fitGpsToSvg(p.lat, p.lon, bounds);
+          return `${pos.x.toFixed(1)},${pos.y.toFixed(1)}`;
+        });
       
-      const pathD = `M ${points.join(' L ')}`;
-      setGpsLearnedPath(pathD);
+      if (points.length > 0) {
+        const pathD = `M ${points.join(' L ')}`;
+        setGpsLearnedPath(pathD);
+      }
     }
   }, [gpsBreadcrumbs]);
 
@@ -265,7 +272,7 @@ export default function CircuitMap() {
   }, [isSchematicMode, gpsLearnedPath]);
 
   const handleSetStartFinish = () => {
-    if (hasGpsFix) {
+    if (hasGpsFix && latitude != null && longitude != null) {
       setStartFinishPoint({ lat: latitude, lon: longitude, time: Date.now() });
       setGpsBreadcrumbs([]); // Reset breadcrumbs for new lap learning
       setShowGpsTrace(true);
@@ -293,7 +300,7 @@ export default function CircuitMap() {
             <Navigation className="w-2.5 h-2.5" />
             <span>{hasGpsFix ? `GPS LOCK (${sats} sat)` : 'NO GPS FIX'}</span>
           </div>
-          {hasGpsFix && (
+          {hasGpsFix && latitude != null && longitude != null && (
             <span className="text-[8px] font-mono text-white/30 tabular-nums">
               {latitude.toFixed(4)}, {longitude.toFixed(4)}
             </span>
@@ -356,9 +363,10 @@ export default function CircuitMap() {
                 <polyline
                   className="trace"
                   points={gpsBreadcrumbs.map(p => {
+                    if (p.lat == null || p.lon == null) return '';
                     const pos = fitGpsToSvg(p.lat, p.lon, bounds);
                     return `${pos.x.toFixed(1)},${pos.y.toFixed(1)}`;
-                  }).join(' ')}
+                  }).filter(Boolean).join(' ')}
                   fill="none"
                   stroke="#10B981"
                   strokeWidth="2"
