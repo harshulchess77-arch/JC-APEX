@@ -12,12 +12,14 @@ import RaceOpsTab from '../components/pit/RaceOpsTab';
 import PostAnalysisTab from '../components/pit/PostAnalysisTab';
 import DriverProfilesTab from '../components/pit/DriverProfilesTab';
 import StrategyBoard from '../components/command/StrategyBoard';
+import CircuitMapTab from '../components/pit/CircuitMapTab';
 
 const TABS = [
   { id: 'overview',        label: 'OVERVIEW'         },
   { id: 'ai-oracle',       label: 'AI ORACLE'        },
   { id: 'strategy',        label: 'STRATEGY BOARD'   },
   { id: 'race-ops',        label: 'RACE OPS'         },
+  { id: 'circuit-map',     label: 'CIRCUIT MAP'      },
   { id: 'driver-profiles', label: 'DRIVER PROFILES'  },
   { id: 'post-analysis',   label: 'POST-ANALYSIS'    },
 ];
@@ -404,6 +406,7 @@ export default function PitCenter() {
             {activeTab === 'ai-oracle'       && <OracleTab oracleMessages={oracleMessages} telemetry={telemetry} />}
             {activeTab === 'strategy'        && <StrategyBoard />}
             {activeTab === 'race-ops'        && <RaceOpsTab flag={flag} onFlagChange={handleFlagChange} commsMessages={commsMessages} onSendCommand={handleSendCommand} />}
+            {activeTab === 'circuit-map'     && <CircuitMapTab />}
             {activeTab === 'driver-profiles' && <DriverProfilesTab />}
             {activeTab === 'post-analysis'   && (
               <PostAnalysisTab
