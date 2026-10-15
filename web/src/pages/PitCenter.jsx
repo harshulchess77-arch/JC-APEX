@@ -8,9 +8,10 @@ import PostAnalysisTab from '../components/pit/PostAnalysisTab';
 import DriverProfilesTab from '../components/pit/DriverProfilesTab';
 import StrategyBoard from '../components/command/StrategyBoard';
 import CircuitMapTab from '../components/pit/CircuitMapTab';
-import PitHeader, { MetricChip } from './pit-center/PitHeader';
+import PitHeader from './pit-center/PitHeader';
 import PitSidebar from './pit-center/PitSidebar';
 import { TABS } from './pit-center/pit-constants';
+import { MetricChip } from '../components/common';
 
 export default function PitCenter() {
   const {
