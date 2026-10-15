@@ -5,6 +5,10 @@ const PasscodeAuthContext = createContext(null);
 
 const STORAGE_KEY = 'jc_apex_passcode_auth';
 
+// SECURITY: Rate limiting configuration
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 300000; // 5 minutes
+
 export const ROLE_PASSCODES = {
   demo: 'DEMO@55',
   pit: 'PEGATSA@55',
@@ -54,6 +58,11 @@ export const ROLE_DASHBOARDS = {
 };
 
 export const PasscodeAuthProvider = ({ children }) => {
+  // Rate limiting state
+  const [loginAttempts, setLoginAttempts] = useState(0);
+  const [lastAttemptTime, setLastAttemptTime] = useState(0);
+  const [isLockedOut, setIsLockedOut] = useState(false);
+
   // Synchronous restoration on mount to prevent any auth redirect race condition
   const initial = (() => {
     try {
@@ -130,8 +139,37 @@ export const PasscodeAuthProvider = ({ children }) => {
    * Universal Login supporting both:
    * login(passcode)
    * login(selectedRole, passcode)
+   *
+   * SECURITY: Rate limiting implemented to prevent brute force attacks
    */
   const login = (roleOrPasscode, maybePasscode) => {
+    const now = Date.now();
+
+    // Check if locked out
+    if (isLockedOut && (now - lastAttemptTime < LOCKOUT_DURATION_MS)) {
+      const remainingTime = Math.ceil((LOCKOUT_DURATION_MS - (now - lastAttemptTime)) / 1000);
+      return {
+        success: false,
+        error: `Too many failed attempts. Try again in ${remainingTime} seconds.`
+      };
+    }
+
+    // Reset lockout if time has passed
+    if (isLockedOut && (now - lastAttemptTime >= LOCKOUT_DURATION_MS)) {
+      setIsLockedOut(false);
+      setLoginAttempts(0);
+    }
+
+    // Check rate limit
+    if (loginAttempts >= MAX_LOGIN_ATTEMPTS) {
+      setIsLockedOut(true);
+      setLastAttemptTime(now);
+      return {
+        success: false,
+        error: 'Too many failed attempts. Account locked for 5 minutes.'
+      };
+    }
+
     let passcode = '';
     let selectedRole = null;
 
@@ -163,6 +201,10 @@ export const PasscodeAuthProvider = ({ children }) => {
     }
 
     if (match) {
+      // Reset attempts on successful login
+      setLoginAttempts(0);
+      setIsLockedOut(false);
+
       const activeSessionId = sessionId || 'race-session-48v';
       setRole(match.role);
       setUserRole(match.userRole);
@@ -180,6 +222,8 @@ export const PasscodeAuthProvider = ({ children }) => {
       };
 
       try {
+        // SECURITY WARNING: localStorage is vulnerable to XSS attacks.
+        // Migration to HttpOnly cookies with Supabase Auth is recommended before production.
         localStorage.setItem(STORAGE_KEY, JSON.stringify(sessionPayload));
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(sessionPayload));
         localStorage.setItem('jc_apex_user_role', match.userRole);
@@ -202,7 +246,26 @@ export const PasscodeAuthProvider = ({ children }) => {
       };
     }
 
-    return { success: false, error: 'Invalid access passcode' };
+    // Increment failed attempt counter
+    const newAttempts = loginAttempts + 1;
+    setLoginAttempts(newAttempts);
+    setLastAttemptTime(now);
+
+    // SECURITY: Log failed authentication attempts for monitoring
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[AUTH_FAIL]', {
+        timestamp: new Date().toISOString(),
+        role: selectedRole || roleOrPasscode,
+        attempts: newAttempts,
+        lockedOut: newAttempts >= MAX_LOGIN_ATTEMPTS
+      });
+    }
+
+    const remaining = MAX_LOGIN_ATTEMPTS - newAttempts;
+    return {
+      success: false,
+      error: `Invalid passcode. ${remaining} attempts remaining.`
+    };
   };
 
   const logout = () => {

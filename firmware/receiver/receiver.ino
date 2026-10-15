@@ -218,8 +218,20 @@ void loop() {
           case 3: watts = atof(token); break;
           case 4: speedHall = atof(token); break;
           case 5: speedGps = atof(token); break;
-          case 6: latitude = atof(token); break;  // New field
-          case 7: longitude = atof(token); break; // New field
+          case 6:
+            latitude = atof(token);
+            // SECURITY: Validate latitude range (-90 to 90 degrees)
+            if (latitude < -90.0f || latitude > 90.0f) {
+              latitude = 0.0f;
+            }
+            break;
+          case 7:
+            longitude = atof(token);
+            // SECURITY: Validate longitude range (-180 to 180 degrees)
+            if (longitude < -180.0f || longitude > 180.0f) {
+              longitude = 0.0f;
+            }
+            break;
           case 8: sats = (uint8_t)atoi(token); break; // New field
           default: break;
         }

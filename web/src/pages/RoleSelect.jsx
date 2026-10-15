@@ -193,22 +193,6 @@ export default function RoleSelect() {
           )}
         </button>
 
-        {/* Demo / Field Presentation Mode Bypass */}
-        <div className="mt-3 flex items-center justify-center">
-          <button
-            type="button"
-            onClick={() => {
-              const res = login('DEMO@55');
-              if (res.success) {
-                navigate(res.route || '/pit');
-              }
-            }}
-            className="text-[10px] font-mono tracking-widest text-muted-foreground/40 hover:text-primary transition-colors uppercase py-1.5 px-3.5 rounded border border-white/5 hover:border-primary/30 hover:bg-primary/5 cursor-pointer"
-          >
-            ⚡ Launch Demo Mode (DEMO@55)
-          </button>
-        </div>
-
         <p className="text-center text-[10px] font-mono text-muted-foreground/20 tracking-widest mt-6">
           ELECTRATHON RACE INTELLIGENCE · SECURE CHANNEL
         </p>

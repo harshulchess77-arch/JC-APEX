@@ -1,14 +1,12 @@
 import { supabase } from './supabaseClient';
 import { logger } from '@/utils/logger';
 
-const PIT_SYSTEM_USER = {
-  email: 'pitcrew@jc-apex.internal',
-  password: 'ApexCrewPassword2026!'
-};
-
 /**
  * Ensures the Supabase client has an active authenticated session
  * to satisfy table RLS write policies on `driver_profiles` / `drivers`.
+ *
+ * SECURITY NOTE: Hardcoded credentials removed. Use Supabase anon key for writes.
+ * If authentication is required, implement proper OAuth with environment variables.
  */
 export async function ensureAuthenticatedSession() {
   try {
@@ -17,14 +15,12 @@ export async function ensureAuthenticatedSession() {
       return sessionData.session;
     }
 
-    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword(PIT_SYSTEM_USER);
-    if (signInError) {
-      if (process.env.NODE_ENV === 'development') {
-        logger.warn('Auto auth sign-in notice:', signInError.message);
-      }
-      return null;
+    // If no session exists, check if we can write with anon key (RLS should allow)
+    // Return null to indicate no authenticated session - caller should handle gracefully
+    if (process.env.NODE_ENV === 'development') {
+      logger.warn('No active Supabase session. Writes will use anon key with RLS policies.');
     }
-    return signInData?.session || null;
+    return null;
   } catch (err) {
     if (process.env.NODE_ENV === 'development') {
       logger.warn('ensureAuthenticatedSession failed:', err.message);

@@ -115,28 +115,52 @@ ALTER TABLE public.commands ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.race_flags ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================================
--- STEP 6: CREATE PERMISSIVE RLS POLICIES (eliminate auth blocks for race ops)
+-- STEP 6: CREATE SECURE RLS POLICIES (proper access control)
 -- ============================================================================
--- telemetry_logs: Allow all operations for all users
+-- telemetry_logs: INSERT for authenticated writes, SELECT for all reads
 DROP POLICY IF EXISTS "telemetry_logs_allow_all" ON public.telemetry_logs;
-CREATE POLICY "telemetry_logs_allow_all" ON public.telemetry_logs
-    FOR ALL
-    USING (true)
+DROP POLICY IF EXISTS "telemetry_logs_allow_insert" ON public.telemetry_logs;
+DROP POLICY IF EXISTS "telemetry_logs_allow_select" ON public.telemetry_logs;
+
+CREATE POLICY "telemetry_logs_allow_insert" ON public.telemetry_logs
+    FOR INSERT
+    TO anon, authenticated
     WITH CHECK (true);
 
--- commands: Allow all operations for all users
+CREATE POLICY "telemetry_logs_allow_select" ON public.telemetry_logs
+    FOR SELECT
+    TO anon, authenticated
+    USING (true);
+
+-- commands: INSERT for service role (pit/director operations), SELECT for all
 DROP POLICY IF EXISTS "commands_allow_all" ON public.commands;
-CREATE POLICY "commands_allow_all" ON public.commands
-    FOR ALL
-    USING (true)
+DROP POLICY IF EXISTS "commands_allow_insert" ON public.commands;
+DROP POLICY IF EXISTS "commands_allow_select" ON public.commands;
+
+CREATE POLICY "commands_allow_insert" ON public.commands
+    FOR INSERT
+    TO service_role
     WITH CHECK (true);
 
--- race_flags: Allow all operations for all users
+CREATE POLICY "commands_allow_select" ON public.commands
+    FOR SELECT
+    TO anon, authenticated
+    USING (true);
+
+-- race_flags: UPDATE only for service role, SELECT for all
 DROP POLICY IF EXISTS "race_flags_allow_all" ON public.race_flags;
-CREATE POLICY "race_flags_allow_all" ON public.race_flags
-    FOR ALL
-    USING (true)
+DROP POLICY IF EXISTS "race_flags_allow_update" ON public.race_flags;
+DROP POLICY IF EXISTS "race_flags_allow_select" ON public.race_flags;
+
+CREATE POLICY "race_flags_allow_update" ON public.race_flags
+    FOR UPDATE
+    TO service_role
     WITH CHECK (true);
+
+CREATE POLICY "race_flags_allow_select" ON public.race_flags
+    FOR SELECT
+    TO anon, authenticated
+    USING (true);
 
 -- ============================================================================
 -- STEP 7: ENABLE REALTIME PUBLICATION
