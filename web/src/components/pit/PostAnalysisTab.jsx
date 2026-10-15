@@ -18,7 +18,9 @@ export default function PostAnalysisTab({ telemetry, chartData, sessionId, telem
       setExportedMsg(filename);
       setTimeout(() => setExportedMsg(null), 5000);
     } catch (err) {
-      console.error('Failed to export PDF:', err);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to export PDF:', err);
+      }
     } finally {
       setExporting(false);
     }

@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { supabase } from '@/lib/supabaseClient';
+import { logger } from '@/utils/logger';
 
 const AuthContext = createContext();
 
@@ -40,7 +41,9 @@ export const AuthProvider = ({ children }) => {
             clearTimeout(timer);
           }
         }).catch((err) => {
-          console.warn('Supabase auth session check failed, bypassing to demo mode:', err);
+          if (process.env.NODE_ENV === 'development') {
+            logger.warn('Supabase auth session check failed, bypassing to demo mode:', err);
+          }
           if (isMounted) {
             setIsLoadingAuth(false);
             setIsLoadingPublicSettings(false);
@@ -56,7 +59,9 @@ export const AuthProvider = ({ children }) => {
         }
       }
     } catch (err) {
-      console.warn('Auth check error, falling back:', err);
+      if (process.env.NODE_ENV === 'development') {
+        logger.warn('Auth check error, falling back:', err);
+      }
       if (isMounted) {
         setIsLoadingAuth(false);
         setIsLoadingPublicSettings(false);

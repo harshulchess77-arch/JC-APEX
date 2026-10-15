@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { logger } from '@/utils/logger';
 
 const PasscodeAuthContext = createContext(null);
 
@@ -81,7 +82,9 @@ export const PasscodeAuthProvider = ({ children }) => {
         };
       }
     } catch (err) {
-      console.warn('[PasscodeAuth] Failed reading saved session:', err);
+      if (process.env.NODE_ENV === 'development') {
+        logger.warn('[PasscodeAuth] Failed reading saved session:', err);
+      }
     }
     return {
       isAuthed: false,
@@ -113,7 +116,9 @@ export const PasscodeAuthProvider = ({ children }) => {
         setIsDemoMode(Boolean(saved.isDemoMode));
         setSessionId(saved.sessionId || sessionIdSaved || 'race-session-48v');
         setIsAuthed(true);
-        console.log('[PasscodeAuth] Session restored from storage:', { effectiveRole, sessionId: saved.sessionId });
+        if (process.env.NODE_ENV === 'development') {
+          logger.log('[PasscodeAuth] Session restored from storage:', { effectiveRole, sessionId: saved.sessionId });
+        }
       }
     } catch {
       // ignore malformed storage
@@ -182,7 +187,9 @@ export const PasscodeAuthProvider = ({ children }) => {
         localStorage.setItem('jc_apex_session_id', activeSessionId);
         sessionStorage.setItem('jc_apex_session_id', activeSessionId);
       } catch (err) {
-        console.warn('[PasscodeAuth] Storage write warning:', err);
+        if (process.env.NODE_ENV === 'development') {
+          logger.warn('[PasscodeAuth] Storage write warning:', err);
+        }
       }
 
       return {

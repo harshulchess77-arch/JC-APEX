@@ -25,7 +25,9 @@ export default function PasscodeProtectedRoute() {
   if (location.pathname === '/driver') {
     const isDriverAuthorized = effectiveRole === 'driver' || effectiveRole === 'director';
     if (!isDriverAuthorized) {
-      console.warn(`[AUTH] Access to /driver denied for role: "${effectiveRole}". Requires DGATSA@55 or RDGATSA@55.`);
+      if (process.env.NODE_ENV === 'development') {
+        console.warn(`[AUTH] Access to /driver denied for role: "${effectiveRole}". Requires DGATSA@55 or RDGATSA@55.`);
+      }
       return <Navigate to="/login" state={{ from: location, unauthorized: true, requiredRole: 'driver' }} replace />;
     }
   }

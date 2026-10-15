@@ -70,7 +70,9 @@ export default function DriverProfile() {
         setForm({ ...EMPTY_DRIVER, ...current });
       }
     } catch (err) {
-      console.error('Error fetching drivers:', err);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error fetching drivers:', err);
+      }
     } finally {
       setLoading(false);
     }
@@ -125,7 +127,9 @@ export default function DriverProfile() {
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (err) {
-      console.error('Failed to save driver:', err);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to save driver:', err);
+      }
       setErrorMsg(err.message || 'Failed to save driver profile.');
     } finally {
       setSaving(false);
@@ -146,7 +150,9 @@ export default function DriverProfile() {
         setForm(EMPTY_DRIVER);
       }
     } catch (err) {
-      console.error('Failed to delete driver:', err);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to delete driver:', err);
+      }
       setErrorMsg(err.message || 'Failed to delete driver.');
     }
   };

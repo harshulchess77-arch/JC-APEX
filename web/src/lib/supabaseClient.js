@@ -4,7 +4,9 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Missing Supabase environment variables. Running in demo mode with mock client.');
+  if (process.env.NODE_ENV === 'development') {
+    console.warn('Missing Supabase environment variables. Running in demo mode with mock client.');
+  }
 }
 
 // Create mock client if credentials are missing

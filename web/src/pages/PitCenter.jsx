@@ -1,11 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { LogOut, Users, Zap, Gauge, CheckCircle2, Car, Flag, Download } from 'lucide-react';
 import { useTelemetry } from '../hooks/useTelemetry';
-import { useRealtimeTelemetry, COMMAND_TYPES, COMMAND_STATUS } from '../hooks/useRealtimeTelemetry';
-import { usePasscodeAuth } from '@/lib/PasscodeAuthContext';
-import { exportTelemetryPDF } from '@/utils/pdfExport';
-import SpeedDial from '../components/pit/SpeedDial';
+import { useRealtimeTelemetry, COMMAND_TYPES } from '../hooks/useRealtimeTelemetry';
 import OverviewTab from '../components/pit/OverviewTab';
 import OracleTab from '../components/pit/OracleTab';
 import RaceOpsTab from '../components/pit/RaceOpsTab';
@@ -13,60 +8,11 @@ import PostAnalysisTab from '../components/pit/PostAnalysisTab';
 import DriverProfilesTab from '../components/pit/DriverProfilesTab';
 import StrategyBoard from '../components/command/StrategyBoard';
 import CircuitMapTab from '../components/pit/CircuitMapTab';
-
-const TABS = [
-  { id: 'overview',        label: 'OVERVIEW'         },
-  { id: 'ai-oracle',       label: 'AI ORACLE'        },
-  { id: 'strategy',        label: 'STRATEGY BOARD'   },
-  { id: 'race-ops',        label: 'RACE OPS'         },
-  { id: 'circuit-map',     label: 'CIRCUIT MAP'      },
-  { id: 'driver-profiles', label: 'DRIVER PROFILES'  },
-  { id: 'post-analysis',   label: 'POST-ANALYSIS'    },
-];
-
-const STRATEGY_MODES = [
-  { id: 'aggressive', label: 'AGGRESSIVE', sub: 'MAX POWER', clr: '#ef4444' },
-  { id: 'balanced',   label: 'BALANCED',   sub: 'OPTIMAL',   clr: '#eab308' },
-  { id: 'conserve',   label: 'CONSERVE',   sub: 'ECO MODE',  clr: '#22c55e' },
-];
-
-const FLAGS = [
-  { key: 'green',  label: 'GREEN',  cls: 'bg-green-700 hover:bg-green-600 text-white' },
-  { key: 'yellow', label: 'YELLOW', cls: 'bg-yellow-600 hover:bg-yellow-500 text-black font-black' },
-  { key: 'red',    label: 'RED',    cls: 'bg-red-700 hover:bg-red-600 text-white' },
-  { key: 'black',  label: 'BLACK',  cls: 'bg-zinc-800 hover:bg-zinc-700 text-white border border-white/10' },
-];
-
-function BatteryBar({ battery }) {
-  const blocks = 10;
-  const filled = Math.round((battery / 100) * blocks);
-  const getColor = (i) => {
-    if (i >= 8) return '#22c55e';
-    if (i >= 5) return '#eab308';
-    return '#ef4444';
-  };
-  return (
-    <div className="flex gap-0.5">
-      {Array.from({ length: blocks }, (_, i) => (
-        <div key={i} className="flex-1 h-1.5 rounded-sm transition-all"
-          style={{ backgroundColor: i < filled ? getColor(i) : 'rgba(255,255,255,0.05)' }} />
-      ))}
-    </div>
-  );
-}
-
-function MetricChip({ label, value, color }) {
-  return (
-    <div className="flex flex-col items-center px-3 py-1.5 border-r border-white/5 last:border-r-0">
-      <span className="text-xs font-display font-bold" style={{ color, textShadow: `0 0 10px ${color}60` }}>{value}</span>
-      <span className="text-[8px] font-mono text-white/20 tracking-wider mt-0.5">{label}</span>
-    </div>
-  );
-}
+import PitHeader, { MetricChip } from './pit-center/PitHeader';
+import PitSidebar from './pit-center/PitSidebar';
+import { TABS } from './pit-center/pit-constants';
 
 export default function PitCenter() {
-  const navigate = useNavigate();
-  const { logout } = usePasscodeAuth();
   const {
     telemetry, strategy, setStrategy,
     flag, setFlag, oracleMessages, commsMessages,
@@ -82,28 +28,6 @@ export default function PitCenter() {
   } = useRealtimeTelemetry('pit');
   const [activeTab, setActiveTab] = useState('overview');
   const [sessionActive, setSessionActive] = useState(false);
-  const [isExportingPdf, setIsExportingPdf] = useState(false);
-
-  const handleQuickExportPDF = async () => {
-    try {
-      setIsExportingPdf(true);
-      await exportTelemetryPDF({
-        sessionId: sessionId || 'JC-APEX-LIVE',
-        telemetry,
-        chartData,
-        telemetryHistory: telemetryHistory || []
-      });
-    } catch (err) {
-      console.error('Failed to export PDF:', err);
-    } finally {
-      setIsExportingPdf(false);
-    }
-  };
-
-  const battColor = telemetry.battery < 20 ? '#FF1E42' : telemetry.battery < 40 ? '#FFB300' : '#10B981';
-  const tempColor = telemetry.temp > 58 ? '#FF1E42' : telemetry.temp > 46 ? '#FFB300' : '#10B981';
-  const latestOracle = oracleMessages[0];
-  const oracleSev = latestOracle?.severity || 'nominal';
 
   const handleSendCommand = (commandText) => {
     // Use realtime hook for actual dispatch
@@ -131,257 +55,42 @@ export default function PitCenter() {
     }
   };
 
+  const battColor = telemetry.battery < 20 ? '#FF1E42' : telemetry.battery < 40 ? '#FFB300' : '#10B981';
+  const tempColor = telemetry.temp > 58 ? '#FF1E42' : telemetry.temp > 46 ? '#FFB300' : '#10B981';
+
   return (
     <div className="min-h-screen bg-[#08090C] flex flex-col overflow-hidden">
 
-      {/* ─── HEADER ─── */}
-      <header className="flex-shrink-0 flex items-center justify-between px-4 h-10 border-b border-white/[0.06] bg-[#101217] glass">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 bg-primary rounded flex items-center justify-center">
-              <span className="text-[8px] font-black text-white">JC</span>
-            </div>
-            <span className="font-display font-black text-sm tracking-widest text-white">APEX</span>
-            <span className="text-white/15 text-xs font-mono ml-1">RACE INTELLIGENCE</span>
-          </div>
-          <div className="w-px h-4 bg-white/10" />
-          <span className="text-[9px] font-mono tracking-widest text-primary font-bold uppercase px-2 py-0.5 rounded bg-primary/10 border border-primary/20">
-            PIT CENTER
-          </span>
-          <button onClick={() => navigate('/driver')}
-            className="flex items-center gap-1 text-[9px] font-mono tracking-widest text-white/40 hover:text-white transition-colors uppercase px-2 py-0.5 rounded hover:bg-white/5 border border-transparent hover:border-white/10">
-            <Car className="w-3 h-3" /> DRIVER HUD
-          </button>
-          <button onClick={() => navigate('/director')}
-            className="flex items-center gap-1 text-[9px] font-mono tracking-widest text-white/40 hover:text-white transition-colors uppercase px-2 py-0.5 rounded hover:bg-white/5 border border-transparent hover:border-white/10">
-            <Flag className="w-3 h-3" /> DIRECTOR
-          </button>
-          <button onClick={() => setActiveTab('driver-profiles')}
-            className={`flex items-center gap-1 text-[9px] font-mono tracking-widest transition-colors uppercase px-2 py-0.5 rounded ${
-              activeTab === 'driver-profiles'
-                ? 'bg-primary/10 text-primary border border-primary/25'
-                : 'text-white/40 hover:text-white hover:bg-white/5'
-            }`}>
-            <Users className="w-3 h-3" /> DRIVERS
-          </button>
-        </div>
-        <div className="flex items-center gap-4">
-          {/* Mode Status Chip */}
-          <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded border text-[9px] font-mono font-bold tracking-widest ${
-            isDemoMode
-              ? 'bg-blue-500/10 border-blue-500/30 text-blue-400'
-              : isLive
-              ? 'bg-green-500/10 border-green-500/30 text-green-400'
-              : 'bg-red-500/10 border-red-500/30 text-red-400'
-          }`}>
-            {isDemoMode ? 'DEMO' : isLive ? 'LIVE' : 'NO SIGNAL'}
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-[9px] font-mono text-green-400 tracking-widest">GHOST-LINK™ ACTIVE</span>
-          </div>
-          {/* Signal Status */}
-          <div className="flex items-center gap-1.5 text-[8px] font-mono">
-            <span className="text-white/20">SIGNAL:</span>
-            <span className={signalLost ? 'text-red-400 animate-pulse' : 'text-green-400'}>
-              {signalLost ? 'LOST' : `${Math.floor((Date.now() - lastPacketTime) / 1000)}s ago`}
-            </span>
-          </div>
-          <span className="text-[9px] font-mono text-white/20">
-            {sessionActive ? '● SESSION LIVE' : '○ STANDBY'}
-          </span>
-          <button
-            onClick={handleQuickExportPDF}
-            disabled={isExportingPdf}
-            className="flex items-center gap-1.5 px-3 py-1 rounded text-[10px] font-display font-bold tracking-wider uppercase transition-all border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer disabled:opacity-50"
-          >
-            <Download className="w-3 h-3" />
-            {isExportingPdf ? 'EXPORTING...' : 'EXPORT PDF'}
-          </button>
-          <button onClick={() => setSessionActive(v => !v)}
-            className={`flex items-center gap-2 px-3 py-1 rounded text-[10px] font-display font-bold tracking-widest uppercase transition-all ${
-              sessionActive
-                ? 'bg-[#1a0000] border border-primary/50 text-primary'
-                : 'bg-green-600 border border-green-400/50 text-white hover:bg-green-500'
-            }`}>
-              {sessionActive ? '■ TERMINATE' : '▶ INITIATE SESSION'}
-          </button>
-          <button onClick={() => { logout(); navigate('/login'); }} className="text-white/15 hover:text-white/40 transition-colors">
-            <LogOut className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </header>
-
-      {/* ─── METRICS STRIP ─── */}
-      <div className="flex-shrink-0 flex items-center border-b border-white/[0.06] bg-[#101217] overflow-x-auto">
-        <MetricChip label="BATTERY" value={`${(telemetry.battery ?? 0).toFixed(1)}%`} color={battColor} />
-        <MetricChip label="TEMP" value={`${(telemetry.temp ?? 0).toFixed(1)}°C`} color={tempColor} />
-        <MetricChip label="EFFICIENCY" value={`${(telemetry.efficiency ?? 0).toFixed(0)}%`} color="#10B981" />
-        <MetricChip label="POWER (WATTS)" value={`${((telemetry.power != null ? telemetry.power : (telemetry.current ?? 0) * (telemetry.voltage ?? 0)).toFixed(0))}W`} color="#FF1E42" />
-        <MetricChip label="48V VOLTAGE" value={`${(telemetry.voltage ?? 0).toFixed(1)}V`} color="#FF1E42" />
-        <MetricChip label="CURRENT" value={`${(telemetry.current ?? 0).toFixed(1)}A`} color="#FFB300" />
-        <MetricChip label="HALL SPEED" value={`${((telemetry.speed_hall != null ? telemetry.speed_hall : telemetry.speed) ?? 0).toFixed(1)}`} color="#FF1E42" />
-        <MetricChip label="GPS SPEED" value={`${((telemetry.speed_gps != null ? telemetry.speed_gps : telemetry.speed) ?? 0).toFixed(1)}`} color="#FFB300" />
-        <MetricChip label="COMPLETED LAPS" value={`#${Math.floor(telemetry.lap ?? 0)}`} color="#10B981" />
-        <MetricChip label="DISTANCE" value={`${(Math.floor(telemetry.lap ?? 0) * 0.25).toFixed(2)}mi`} color="#FF1E42" />
-        <div className="ml-auto flex-shrink-0 px-3">
-          <span className={`text-[9px] font-mono font-bold px-2.5 py-1 rounded border tracking-widest ${
-            flag === 'green'  ? 'border-green-500/40 text-green-400 bg-green-500/10' :
-            flag === 'yellow' ? 'border-yellow-500/40 text-yellow-400 bg-yellow-500/10' :
-            flag === 'red'    ? 'border-primary/40 text-primary bg-primary/10 animate-pulse' :
-            flag === 'black'  ? 'border-white/20 text-white bg-black' :
-                                'border-white/10 text-white/30 bg-white/5'
-          }`}>● {flag.toUpperCase()}</span>
-        </div>
-      </div>
+      <PitHeader
+        telemetry={telemetry}
+        isDemoMode={isDemoMode}
+        isLive={isLive}
+        signalLost={signalLost}
+        lastPacketTime={lastPacketTime}
+        sessionActive={sessionActive}
+        setSessionActive={setSessionActive}
+        sessionId={sessionId}
+        telemetryHistory={telemetryHistory}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        flag={flag}
+      />
 
       {/* ─── BODY ─── */}
       <div className="flex flex-1 overflow-hidden">
 
         {/* ─── SIDEBAR ─── */}
-        <aside className="w-[200px] flex-shrink-0 border-r border-white/[0.06] bg-[#101217] flex flex-col overflow-y-auto">
-
-          {/* Speed Dial */}
-          <div className="p-3 pb-2 border-b border-white/[0.06]">
-            <SpeedDial speed={telemetry.speed} maxSpeed={40} throttle={Math.round(telemetry.efficiency)} mode={strategy.toUpperCase()} />
-          </div>
-
-          {/* Energy Cell */}
-          <div className="p-3 border-b border-white/[0.06]">
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <Zap className="w-2.5 h-2.5 text-primary" />
-              <span className="text-[8px] font-mono tracking-widest text-white/20 uppercase">Energy Cell</span>
-            </div>
-            <div className="flex items-baseline gap-1 mb-1.5">
-              <span className="text-3xl font-display font-black" style={{ color: battColor }}>{(telemetry.battery ?? 0).toFixed(0)}</span>
-              <span className="text-white/25 font-mono text-xs">%</span>
-              <span className="ml-auto text-sm font-display font-bold text-[#FF1E42]">{(telemetry.voltage ?? 0).toFixed(1)}V</span>
-            </div>
-            <BatteryBar battery={telemetry.battery} />
-            <div className="flex items-center justify-between mt-1.5 text-[8px] font-mono text-white/20">
-              <span>PACE TARGET —</span>
-              <span className="text-green-400 font-bold">OPTIMAL</span>
-            </div>
-          </div>
-
-          {/* Pit Communication Quick Actions */}
-          <div className="p-3 border-b border-white/[0.06]">
-            <div className="flex items-center gap-1.5 mb-2">
-              <span className="text-[8px] font-mono tracking-widest text-white/20 uppercase">Quick Commands</span>
-            </div>
-            <div className="grid grid-cols-2 gap-1">
-              <button onClick={() => handleSendCommand('BOX THIS LAP')}
-                className="py-2 rounded text-[9px] font-display font-bold tracking-wider transition-all bg-[#FF1E42]/10 border border-[#FF1E42]/30 text-[#FF1E42] hover:bg-[#FF1E42]/20 cursor-pointer">
-                BOX THIS LAP
-              </button>
-              <button onClick={() => handleSendCommand('PACE DOWN')}
-                className="py-2 rounded text-[9px] font-display font-bold tracking-wider transition-all bg-[#FFB300]/10 border border-[#FFB300]/30 text-[#FFB300] hover:bg-[#FFB300]/20 cursor-pointer">
-                PACE DOWN
-              </button>
-              <button onClick={() => handleSendCommand('TARGET PACE: 25 MPH')}
-                className="py-2 rounded text-[9px] font-display font-bold tracking-wider transition-all bg-[#10B981]/10 border border-[#10B981]/30 text-[#10B981] hover:bg-[#10B981]/20 cursor-pointer">
-                TARGET 25 MPH
-              </button>
-              <button onClick={() => handleSendCommand('PUSH HARD')}
-                className="py-2 rounded text-[9px] font-display font-bold tracking-wider transition-all bg-[#FF1E42]/10 border border-[#FF1E42]/30 text-[#FF1E42] hover:bg-[#FF1E42]/20 cursor-pointer">
-                PUSH HARD
-              </button>
-            </div>
-          </div>
-
-          {/* Driver Response Status */}
-          <div className="p-3 border-b border-white/[0.06]">
-            <div className="flex items-center gap-1.5 mb-2">
-              <CheckCircle2 className="w-2.5 h-2.5 text-white/20" />
-              <span className="text-[8px] font-mono tracking-widest text-white/20 uppercase">Driver Response Status</span>
-            </div>
-            <div className="space-y-1.5 max-h-32 overflow-y-auto">
-              {commandHistory.length === 0 ? (
-                <div className="text-[8px] font-mono text-white/15 text-center py-2">No commands sent</div>
-              ) : (
-                commandHistory.slice(-5).reverse().map(cmd => (
-                  <div key={cmd.id} className={`flex items-center justify-between px-2 py-1.5 rounded text-[8px] font-mono border ${
-                    cmd.status === COMMAND_STATUS.ACKNOWLEDGED 
-                      ? 'border-green-500/30 bg-green-500/5 text-green-400' 
-                      : cmd.status === COMMAND_STATUS.SENT
-                      ? 'border-yellow-500/30 bg-yellow-500/5 text-yellow-400'
-                      : 'border-white/5 bg-white/[0.02] text-white/30'
-                  }`}>
-                    <span className="truncate max-w-[120px]">{cmd.payload}</span>
-                    <span className="flex items-center gap-1">
-                      {cmd.status === COMMAND_STATUS.ACKNOWLEDGED && <CheckCircle2 className="w-3 h-3" />}
-                      {cmd.status}
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Race Control */}
-          <div className="p-3 border-b border-white/[0.06]">
-            <div className="flex items-center gap-1.5 mb-2">
-              <span className="text-[8px] font-mono tracking-widest text-white/20 uppercase">Race Control · Flags</span>
-              <div className={`w-1.5 h-1.5 rounded-full ml-auto flex-shrink-0 ${
-                flag === 'green' ? 'bg-green-500' : flag === 'yellow' ? 'bg-yellow-500' : 'bg-primary'
-              }`} />
-            </div>
-            <div className="grid grid-cols-2 gap-1">
-              {FLAGS.map(f => (
-                <button key={f.key} onClick={() => setFlag(f.key)}
-                  className={`py-1.5 rounded text-[9px] font-display font-bold tracking-wider transition-all ${f.cls} ${
-                    flag === f.key ? 'ring-1 ring-white/25' : 'opacity-50 hover:opacity-80'
-                  }`}>
-                  {f.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Race Strategy */}
-          <div className="p-3 border-b border-white/[0.06]">
-            <div className="flex items-center gap-1.5 mb-2">
-              <Gauge className="w-2.5 h-2.5 text-white/20" />
-              <span className="text-[8px] font-mono tracking-widest text-white/20 uppercase">Race Strategy</span>
-            </div>
-            <div className="space-y-1">
-              {STRATEGY_MODES.map(s => (
-                <button key={s.id} onClick={() => handleStrategyChange(s.id)}
-                  className={`w-full flex items-center justify-between px-2.5 py-2 rounded border text-[10px] font-display font-bold tracking-wider transition-all ${
-                    strategy === s.id
-                      ? 'bg-white/5 border-white/10'
-                      : 'border-transparent text-white/20 hover:text-white/40 hover:bg-white/3'
-                  }`}
-                  style={strategy === s.id ? { color: s.clr, borderColor: `${s.clr}30` } : {}}>
-                  <span>{s.label}</span>
-                  <span className="text-[8px] font-mono opacity-50">{s.sub}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Oracle alert */}
-          {latestOracle && (
-            <div className={`mx-3 my-2 px-2.5 py-2 rounded border text-[9px] font-mono leading-relaxed ${
-              oracleSev === 'critical' ? 'border-primary/25 bg-primary/5 text-primary' :
-              oracleSev === 'warning'  ? 'border-yellow-500/25 bg-yellow-500/5 text-yellow-400' :
-                                         'border-green-500/25 bg-green-500/5 text-green-400'
-            }`}>
-              <div className="text-[7px] font-bold tracking-widest opacity-50 mb-0.5">ORACLE</div>
-              {latestOracle.text}
-            </div>
-          )}
-
-          {/* Race time */}
-          <div className="p-3 mt-auto border-t border-white/[0.06]">
-            <div className="text-[7px] font-mono text-white/15 tracking-wider mb-1">RACE TIME</div>
-            <div className="text-xl font-display font-black text-primary">{formatTime(telemetry.raceTime)}</div>
-            <div className="flex items-center gap-2 mt-1 text-[8px] font-mono text-white/20">
-              <span>COMPLETED <span className="text-white/40 font-bold">{Math.floor(telemetry.lap)} LAPS</span></span>
-              <span>· 62M TIME CAP</span>
-            </div>
-          </div>
-        </aside>
+        <PitSidebar
+          telemetry={telemetry}
+          strategy={strategy}
+          flag={flag}
+          setFlag={handleFlagChange}
+          handleStrategyChange={handleStrategyChange}
+          handleSendCommand={handleSendCommand}
+          formatTime={formatTime}
+          commandHistory={commandHistory}
+          oracleMessages={oracleMessages}
+        />
 
         {/* ─── MAIN AREA ─── */}
         <div className="flex-1 flex flex-col overflow-hidden">

@@ -18,7 +18,9 @@ export default function DriverProfilesTab() {
         setSelectedDriver(prev => (prev ? data.find(d => d.id === prev.id) || data[0] : data[0]));
       }
     } catch (err) {
-      console.error('Failed to load drivers:', err);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to load drivers:', err);
+      }
     } finally {
       setLoading(false);
     }

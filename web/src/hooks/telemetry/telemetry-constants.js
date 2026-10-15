@@ -1,0 +1,18 @@
+export const ZERO_TELEMETRY = {
+  speed: 0.00,
+  speed_hall: 0.00,
+  speed_gps: 0.00,
+  battery: 0,
+  temp: null,
+  voltage: 0.00,
+  current: 0.00,
+  power: 0.00,
+  latitude: 0.00,
+  longitude: 0.00,
+  efficiency: 0,
+  lap: null,
+  totalLaps: 30,
+  raceTime: null,
+  gpsFix: false,
+  sats: 0,
+};

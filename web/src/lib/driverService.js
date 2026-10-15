@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { logger } from '@/utils/logger';
 
 const PIT_SYSTEM_USER = {
   email: 'pitcrew@jc-apex.internal',
@@ -18,12 +19,16 @@ export async function ensureAuthenticatedSession() {
 
     const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword(PIT_SYSTEM_USER);
     if (signInError) {
-      console.warn('Auto auth sign-in notice:', signInError.message);
+      if (process.env.NODE_ENV === 'development') {
+        logger.warn('Auto auth sign-in notice:', signInError.message);
+      }
       return null;
     }
     return signInData?.session || null;
   } catch (err) {
-    console.warn('ensureAuthenticatedSession failed:', err.message);
+    if (process.env.NODE_ENV === 'development') {
+      logger.warn('ensureAuthenticatedSession failed:', err.message);
+    }
     return null;
   }
 }
@@ -56,7 +61,9 @@ export async function getDriverProfiles() {
 
     return profileData || driversData || [];
   } catch (err) {
-    console.error('getDriverProfiles exception:', err);
+    if (process.env.NODE_ENV === 'development') {
+      logger.error('getDriverProfiles exception:', err);
+    }
     return [];
   }
 }
@@ -107,7 +114,9 @@ export async function saveDriverProfile(driverData, driverId = null) {
 
       if (!error && data) return data;
       if (error && !error.message?.includes('does not exist')) {
-        console.warn('driver_profiles update error, attempting drivers table:', error.message);
+        if (process.env.NODE_ENV === 'development') {
+          logger.warn('driver_profiles update error, attempting drivers table:', error.message);
+        }
       }
     } else {
       const { data, error } = await supabase
@@ -118,11 +127,15 @@ export async function saveDriverProfile(driverData, driverId = null) {
 
       if (!error && data) return data;
       if (error && !error.message?.includes('does not exist')) {
-        console.warn('driver_profiles insert error, attempting drivers table:', error.message);
+        if (process.env.NODE_ENV === 'development') {
+          logger.warn('driver_profiles insert error, attempting drivers table:', error.message);
+        }
       }
     }
   } catch (err) {
-    console.warn('driver_profiles write attempt error:', err.message);
+    if (process.env.NODE_ENV === 'development') {
+      logger.warn('driver_profiles write attempt error:', err.message);
+    }
   }
 
   // 2. Secondary Target: Fallback to 'drivers' table
@@ -136,7 +149,9 @@ export async function saveDriverProfile(driverData, driverId = null) {
         .single();
 
       if (error) {
-        console.warn('drivers table update error:', error.message);
+        if (process.env.NODE_ENV === 'development') {
+          logger.warn('drivers table update error:', error.message);
+        }
         return { ...payload, id: driverId };
       }
       return data;
@@ -148,13 +163,17 @@ export async function saveDriverProfile(driverData, driverId = null) {
         .single();
 
       if (error) {
-        console.warn('drivers table insert error:', error.message);
+        if (process.env.NODE_ENV === 'development') {
+          logger.warn('drivers table insert error:', error.message);
+        }
         return { ...payload, id: `driver_${Date.now()}` };
       }
       return data;
     }
   } catch (err) {
-    console.warn('Database save completed with local fallback:', err.message);
+    if (process.env.NODE_ENV === 'development') {
+      logger.warn('Database save completed with local fallback:', err.message);
+    }
     return { ...payload, id: driverId || `driver_${Date.now()}` };
   }
 }

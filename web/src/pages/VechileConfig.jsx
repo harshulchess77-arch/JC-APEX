@@ -40,7 +40,9 @@ export default function VehicleConfig() {
         .order('created_at', { ascending: false });
       
       if (error) {
-        console.error('Error fetching vehicle configs:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error fetching vehicle configs:', error);
+        }
       } else {
         setConfigs(data);
         if (data.length > 0) {
@@ -67,7 +69,9 @@ export default function VehicleConfig() {
         .select()
         .single();
       if (error) {
-        console.error('Error updating vehicle config:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error updating vehicle config:', error);
+        }
         setSaving(false);
         return;
       }
@@ -80,7 +84,9 @@ export default function VehicleConfig() {
         .select()
         .single();
       if (error) {
-        console.error('Error creating vehicle config:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error creating vehicle config:', error);
+        }
         setSaving(false);
         return;
       }

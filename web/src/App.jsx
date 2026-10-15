@@ -2,7 +2,9 @@ import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
-import PageNotFound from './lib/PageNotFound';
+import NotFound from './pages/NotFound';
+import ServerError from './pages/ServerError';
+import Forbidden from './pages/Forbidden';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import PasscodeProtectedRoute from '@/components/PasscodeProtectedRoute';
 import { PasscodeAuthProvider } from '@/lib/PasscodeAuthContext';
@@ -44,6 +46,11 @@ const AuthenticatedApp = () => {
         <Route path="/login" element={<RoleSelect />} />
         <Route path="/command-center" element={<Navigate to="/pit" replace />} />
 
+        {/* ── ERROR PAGES ── */}
+        <Route path="/404" element={<NotFound />} />
+        <Route path="/500" element={<ServerError />} />
+        <Route path="/403" element={<Forbidden />} />
+
         {/* ── PROTECTED ROUTES (require passcode auth) ── */}
         <Route element={<PasscodeProtectedRoute />}>
           <Route path="/pit"                    element={<PitCenter />} />
@@ -57,7 +64,7 @@ const AuthenticatedApp = () => {
           <Route path="/settings"               element={<AppSettings />} />
           <Route path="/live-comms"             element={<LiveComms />} />
           <Route path="/benchmarks"             element={<Benchmarks />} />
-          <Route path="*"                       element={<PageNotFound />} />
+          <Route path="*"                       element={<NotFound />} />
         </Route>
       </Routes>
     </RaceEngineProvider>
