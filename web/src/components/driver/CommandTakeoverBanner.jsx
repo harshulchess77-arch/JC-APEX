@@ -1,60 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/lib/supabaseClient';
+import { useRealtimeTelemetry, COMMAND_STATUS } from '@/hooks/useRealtimeTelemetry';
 
 export default function CommandTakeoverBanner() {
-  const [current, setCurrent] = useState(null);
+  const { incomingCommands, sendAck } = useRealtimeTelemetry('driver');
   const [visible, setVisible] = useState(false);
-  const seenRef = useRef(new Set());
-  const currentIdRef = useRef(null);
   const ackingRef = useRef(false);
 
-  useEffect(() => { currentIdRef.current = current?.id || null; }, [current]);
+  const current = incomingCommands[0]; // Most recent command
 
   useEffect(() => {
-    if (current && current.status === 'Acknowledged') setVisible(false);
+    if (current && current.status === COMMAND_STATUS.ACKNOWLEDGED) {
+      setVisible(false);
+    } else if (current && current.status === COMMAND_STATUS.DELIVERED) {
+      setVisible(true);
+    }
   }, [current]);
-
-  useEffect(() => {
-    let unsub;
-    (async () => {
-      try {
-        const list = await base44.entities.RaceMessage.list('-created_date', 20);
-        const arr = (list || []).slice().sort((a, b) => String(a.created_date || '').localeCompare(String(b.created_date || '')));
-        arr.forEach(m => seenRef.current.add(m.id));
-        const lastUnacked = [...arr].reverse().find(m => m.status !== 'Acknowledged');
-        if (lastUnacked) {
-          setCurrent(lastUnacked);
-          setVisible(true);
-          if (lastUnacked.status === 'Pending') {
-            base44.entities.RaceMessage.update(lastUnacked.id, { status: 'Delivered' }).catch(() => {});
-          }
-        }
-      } catch {}
-
-      unsub = base44.entities.RaceMessage.subscribe((event) => {
-        if (event.type === 'create') {
-          if (!seenRef.current.has(event.data.id) && event.data.status === 'Pending') {
-            seenRef.current.add(event.data.id);
-            setCurrent(event.data);
-            setVisible(true);
-            base44.entities.RaceMessage.update(event.data.id, { status: 'Delivered' }).catch(() => {});
-          } else {
-            seenRef.current.add(event.data.id);
-          }
-        } else if (event.type === 'update') {
-          seenRef.current.add(event.data.id);
-          if (currentIdRef.current === event.data.id) setCurrent(event.data);
-        }
-      });
-    })();
-    return () => unsub?.();
-  }, []);
 
   const ack = async () => {
     if (!current || ackingRef.current) return;
     ackingRef.current = true;
-    try { await base44.entities.RaceMessage.update(current.id, { status: 'Acknowledged' }); } catch {}
+    sendAck(current.id, current.payload);
     ackingRef.current = false;
     setVisible(false);
   };

@@ -76,6 +76,14 @@ BEGIN
     ) THEN
         ALTER TABLE public.telemetry_logs ADD COLUMN sats INT DEFAULT 0;
     END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'telemetry_logs'
+        AND column_name = 'wh'
+    ) THEN
+        ALTER TABLE public.telemetry_logs ADD COLUMN wh DOUBLE PRECISION DEFAULT 0.0;
+    END IF;
 END $$;
 
 -- ============================================================================

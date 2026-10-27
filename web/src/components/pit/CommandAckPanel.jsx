@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Radio, CheckCircle2, Clock } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
 import { supabase } from '@/lib/supabaseClient';
+import { useRealtimeTelemetry, COMMAND_STATUS } from '@/hooks/useRealtimeTelemetry';
 
 const COMMANDS = [
   { id: 'BOX THIS LAP', label: 'BOX THIS LAP', color: '#FF1E42' },
@@ -11,167 +11,22 @@ const COMMANDS = [
 ];
 
 export default function CommandAckPanel() {
-  const [messages, setMessages] = useState([]);
+  const { commandHistory, sendCommand } = useRealtimeTelemetry('pit');
   const [sending, setSending] = useState(null);
   const scrollRef = useRef(null);
 
-  // Sync with both base44 entities and Supabase commands table
-  useEffect(() => {
-    let unsubBase44;
-    let channelSupabase;
-
-    // Load initial from base44
-    (async () => {
-      try {
-        const list = await base44.entities.RaceMessage.list('-created_date', 50);
-        if (list && list.length > 0) {
-          setMessages(list);
-        }
-      } catch {}
-
-      // Try initial load from Supabase commands
-      try {
-        const { data } = await supabase
-          .from('commands')
-          .select('*')
-          .order('sent_at', { ascending: false })
-          .limit(30);
-        if (data && data.length > 0) {
-          setMessages(prev => {
-            const map = new Map();
-            data.forEach(d => {
-              map.set(String(d.id), {
-                id: d.id,
-                commandText: d.command_name || d.payload?.text || 'COMMAND',
-                status: d.status === 'ACKNOWLEDGED' ? 'Acknowledged' : 'Pending',
-                timestamp: d.sent_at || d.created_at,
-                ack_timestamp: d.acknowledged_at,
-              });
-            });
-            prev.forEach(p => {
-              if (!map.has(String(p.id)) && !map.has(String(p.messageId))) {
-                map.set(String(p.id || p.messageId), p);
-              }
-            });
-            return Array.from(map.values()).sort((a, b) => 
-              String(b.timestamp || '').localeCompare(String(a.timestamp || ''))
-            );
-          });
-        }
-      } catch {}
-
-      // Base44 realtime subscription
-      try {
-        unsubBase44 = base44.entities.RaceMessage.subscribe((event) => {
-          setMessages(prev => {
-            let next;
-            if (event.type === 'create') next = [event.data, ...prev];
-            else if (event.type === 'delete') return prev.filter(m => m.id !== event.data.id);
-            else next = prev.map(m => (m.id === event.data.id ? event.data : m));
-            return next;
-          });
-        });
-      } catch {}
-
-      // Supabase realtime commands listener
-      try {
-        channelSupabase = supabase.channel('race_ops_commands_sync')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'commands' }, (payload) => {
-            const row = payload.new;
-            if (!row) return;
-            const item = {
-              id: row.id,
-              commandText: row.command_name || row.payload?.text || 'COMMAND',
-              status: row.status === 'ACKNOWLEDGED' ? 'Acknowledged' : 'Pending',
-              timestamp: row.sent_at || row.created_at,
-              ack_timestamp: row.acknowledged_at,
-            };
-            setMessages(prev => {
-              const idx = prev.findIndex(m => String(m.id) === String(row.id));
-              if (idx >= 0) {
-                const updated = [...prev];
-                updated[idx] = { ...updated[idx], ...item };
-                return updated;
-              }
-              return [item, ...prev];
-            });
-          })
-          .on('broadcast', { event: 'driver_ack' }, (payload) => {
-            const data = payload.payload || payload.data || payload;
-            if (!data?.commandId) return;
-            setMessages(prev => prev.map(m => {
-              if (String(m.id) === String(data.commandId)) {
-                return { ...m, status: 'Acknowledged', ack_timestamp: new Date().toISOString() };
-              }
-              return m;
-            }));
-          })
-          .subscribe();
-      } catch {}
-    })();
-
-    return () => {
-      unsubBase44?.();
-      if (channelSupabase) supabase.removeChannel(channelSupabase);
-    };
-  }, []);
+  // Map commandHistory to UI format
+  const messages = commandHistory.map(cmd => ({
+    id: cmd.id,
+    commandText: cmd.payload || cmd.type,
+    status: cmd.status === COMMAND_STATUS.ACKNOWLEDGED ? 'Acknowledged' : 'Pending',
+    timestamp: cmd.timestamp,
+    ack_timestamp: cmd.ackedAt,
+  }));
 
   const send = async (cmd) => {
     setSending(cmd);
-    const nowIso = new Date().toISOString();
-    const tempId = `cmd_${Date.now()}`;
-
-    // Optimistic UI update
-    const optMsg = {
-      id: tempId,
-      commandText: cmd,
-      status: 'Pending',
-      timestamp: nowIso,
-      created_date: nowIso,
-    };
-    setMessages(prev => [optMsg, ...prev]);
-
-    // Dispatch to Base44
-    try {
-      await base44.entities.RaceMessage.create({
-        messageId: tempId,
-        commandText: cmd,
-        status: 'Pending',
-        timestamp: nowIso,
-        created_date: nowIso,
-      });
-    } catch {}
-
-    // Dispatch to Supabase DB
-    try {
-      await supabase.from('commands').insert({
-        command_name: cmd,
-        payload: { text: cmd, command: cmd },
-        status: 'PENDING',
-        priority: 'HIGH',
-        target: 'CAR_01',
-        sent_at: nowIso,
-      });
-    } catch {}
-
-    // Broadcast over Realtime channel to Driver HUD
-    try {
-      const channel = supabase.channel('race_telemetry');
-      await channel.send({
-        type: 'broadcast',
-        event: 'quick_command',
-        payload: {
-          id: tempId,
-          command_name: cmd,
-          payload: cmd,
-          text: cmd,
-          sender: 'PIT',
-          status: 'SENT',
-          timestamp: Date.now(),
-        },
-      });
-    } catch {}
-
+    sendCommand('COMMAND', cmd);
     setSending(null);
   };
 

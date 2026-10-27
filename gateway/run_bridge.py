@@ -1,28 +1,18 @@
+#!/usr/bin/env python3
 """
 ================================================================================
-  JC-APEX UNIFIED TELEMETRY BRIDGE - SERIAL TO SUPABASE/CSV
-  ELECTROTHON 48V TRACTIVE SYSTEM, MOTOR HALL & GPS INTEGRATION
+JC-APEX UNIFIED TELEMETRY BRIDGE v2.1 (NON-BLOCKING ASYNC QUEUE)
 ================================================================================
-Production-ready bridge with dual-mode operation:
-- ONLINE MODE: Serial → Supabase Realtime (with CSV backup)
-- OFFLINE MODE: Serial → CSV (field testing, zero-network)
+Reads 5 Hz JSON telemetry frames from Heltec WiFi LoRa 32 (V3) Receiver over
+USB Serial (115200 baud), writes immediately to a local fault-tolerant CSV
+backup, and streams asynchronously to Supabase Realtime via a background
+worker thread so network latency never blocks serial reception.
 
-Features:
-- Auto-detects USB serial ports (CP210x, CH340, Heltec)
-- Flexible field parsing (id/packet_id, amps/current, volts/voltage)
-- CSV backup for data safety
-- Auto-reconnect with exponential backoff
-- Packet gap detection and reporting
-- Console telemetry visualizer
-
-Requirements:
-- pip install pyserial requests python-dotenv
-
-Usage:
-- python run_bridge.py --mode online                 # Online mode (default)
-- python run_bridge.py --mode offline                # Offline mode
-- python run_bridge.py --port COM3                   # Explicit COM port
-- python run_bridge.py --port /dev/ttyUSB0           # Linux/macOS port
+RACE-DEPLOYMENT READY:
+- Non-blocking serial I/O (never waits for network)
+- Immediate CSV write guarantee (zero data loss)
+- Background thread Supabase upload (cellular lag immunity)
+- wh (watt-hours) cumulative energy tracking
 ================================================================================
 """
 
@@ -30,282 +20,261 @@ import os
 import sys
 import time
 import json
+import queue
+import signal
 import argparse
-import requests
+import threading
 from datetime import datetime, timezone
+
 import serial
 import serial.tools.list_ports
+import requests
 from dotenv import load_dotenv
 
-# Load Supabase credentials from local .env or parent directory
 load_dotenv()
-
-SERIAL_BAUD = 115200
-SERIAL_TIMEOUT = 1.0
 
 
 class UnifiedTelemetryBridge:
-    def __init__(self, mode='online', serial_port=None):
-        self.mode = mode
+    def __init__(self, mode="online", serial_port=None, baud_rate=115200):
+        self.mode = mode.lower()
         self.serial_port = serial_port
-        self.serial_conn = None
-        self.session_id = datetime.now(timezone.utc).strftime("SES_%Y%m%d_%H%M%S")
-        self.csv_backup = f"session_{self.session_id}.csv"
-        self.packet_count = 0
-        self.error_count = 0
-        self.last_packet_id = -1
+        self.baud_rate = baud_rate
+        self.ser = None
         self.running = True
+        self.last_packet_id = -1
+
+        # Supabase configuration
+        self.supabase_url = (os.getenv("SUPABASE_URL") or "").rstrip("/")
+        self.supabase_key = (
+            os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+            or os.getenv("SUPABASE_ANON_KEY")
+            or os.getenv("VITE_SUPABASE_ANON_KEY")
+            or ""
+        )
+        self.table_name = os.getenv("SUPABASE_TABLE", "telemetry_logs")
         self.schema_fallback_active = False
 
-        # Supabase Configuration (online mode only)
-        self.supabase_url = os.getenv('SUPABASE_URL')
-        self.supabase_key = os.getenv('SUPABASE_SERVICE_ROLE_KEY') or os.getenv('SUPABASE_ANON_KEY')
+        if self.mode == "online" and (not self.supabase_url or not self.supabase_key):
+            print("[WARN] Supabase credentials missing in .env. Falling back to OFFLINE (CSV-only) mode.")
+            self.mode = "offline"
 
-        if self.mode == 'online':
-            if not self.supabase_url or not self.supabase_key:
-                print("\n[CONFIG WARNING] Missing SUPABASE_URL or SUPABASE_KEY in environment!")
-                print("Falling back to OFFLINE mode (CSV logging only).\n")
-                self.mode = 'offline'
-                self.live_upload_enabled = False
-            else:
-                self.live_upload_enabled = True
-                self.rest_url = f"{self.supabase_url.rstrip('/')}/rest/v1/telemetry_logs"
-                self.headers = {
-                    'apikey': self.supabase_key,
-                    'Authorization': f'Bearer {self.supabase_key}',
-                    'Content-Type': 'application/json',
-                    'Prefer': 'return=minimal'
-                }
-        else:
-            self.live_upload_enabled = False
+        self.live_upload_enabled = self.mode == "online"
 
-        # Initialize CSV Backup File
+        # Local CSV session backup
+        timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.session_id = f"SES_{timestamp_str}"
+        os.makedirs("sessions", exist_ok=True)
+        self.csv_backup = os.path.join("sessions", f"session_{self.session_id}.csv")
         self._init_csv_backup()
 
+        # Non-blocking background upload queue & worker thread
+        self.upload_queue = queue.Queue(maxsize=500)
+        self.http_session = requests.Session()
+        if self.live_upload_enabled:
+            self.worker_thread = threading.Thread(target=self._supabase_worker, daemon=True)
+            self.worker_thread.start()
+
     def _init_csv_backup(self):
-        try:
-            with open(self.csv_backup, 'w') as f:
-                f.write("timestamp,id,volts,amps,watts,speed_h,speed_g,latitude,longitude,sats,rssi,snr\n")
-        except Exception as e:
-            print(f"[BACKUP WARNING] Could not initialize CSV file: {e}")
+        with open(self.csv_backup, "w", encoding="utf-8") as f:
+            f.write(
+                "timestamp,id,volts,amps,watts,wh,speed_h,speed_g,"
+                "latitude,longitude,sats,rssi,snr\n"
+            )
+        print(f"[CSV BACKUP] Logging all frames to: {self.csv_backup}")
 
     def auto_detect_serial_port(self):
-        """Auto-detects Silicon Labs CP210x / USB Serial devices with fallback."""
         ports = serial.tools.list_ports.comports()
-        print("\n[SERIAL] Scanning available ports:")
         candidates = []
         for p in ports:
-            print(f"  - {p.device}: {p.description}")
-            desc = (p.description or '').lower()
-            # Prioritize Silicon Labs CP210x
-            if 'cp210' in desc or 'silicon labs' in desc:
+            desc = (p.description or "").lower()
+            hwid = (p.hwid or "").lower()
+            if "cp210" in desc or "silicon labs" in desc or "10c4:ea60" in hwid:
                 candidates.insert(0, p.device)
-            elif any(k in desc for k in ['usb', 'uart', 'ch340', 'heltec', 'serial', 'espressif']):
+            elif any(k in desc for k in ["usb", "uart", "ch340", "heltec", "serial", "espressif"]):
                 candidates.append(p.device)
 
         if candidates:
-            print(f"[SERIAL] Auto-selected candidate port: {candidates[0]}")
+            print(f"[AUTO-DETECT] Selected serial port: {candidates[0]}")
             return candidates[0]
-        elif ports:
-            print(f"[SERIAL] Defaulting to first available port: {ports[0].device}")
-            return ports[0].device
-
         return None
 
     def connect(self):
         port_to_use = self.serial_port or self.auto_detect_serial_port()
         if not port_to_use:
-            print("\n[SERIAL ERROR] No serial port detected. Please connect your Heltec V3 Receiver.")
+            print("[SERIAL ERR] No Heltec V3 USB Serial device detected.")
             return False
 
         try:
-            self.serial_conn = serial.Serial(port_to_use, SERIAL_BAUD, timeout=SERIAL_TIMEOUT)
-            print(f"[SERIAL OK] Connected to {port_to_use} at {SERIAL_BAUD} baud.")
-            print(f"[SESSION ID] {self.session_id}")
-            print(f"[MODE] {self.mode.upper()}")
-            print(f"[CSV BACKUP] {self.csv_backup}")
+            self.ser = serial.Serial(port_to_use, self.baud_rate, timeout=1.0)
+            self.ser.reset_input_buffer()
+            print(f"[SERIAL OK] Connected to {port_to_use} at {self.baud_rate} baud.")
             return True
-        except Exception as e:
-            print(f"[SERIAL ERROR] Failed to open port {port_to_use}: {e}")
+        except serial.SerialException as e:
+            print(f"[SERIAL ERR] Could not open {port_to_use}: {e}")
             return False
 
-    def push_to_supabase(self, payload):
-        """Sends single telemetry record to Supabase via REST POST."""
-        if not self.live_upload_enabled:
+    def _supabase_worker(self):
+        """Background thread that uploads telemetry frames without blocking USB Serial."""
+        endpoint = f"{self.supabase_url}/rest/v1/{self.table_name}"
+        headers = {
+            "apikey": self.supabase_key,
+            "Authorization": f"Bearer {self.supabase_key}",
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal",
+        }
+
+        while self.running:
+            try:
+                payload = self.upload_queue.get(timeout=0.5)
+            except queue.Empty:
+                continue
+
+            try:
+                res = self.http_session.post(endpoint, headers=headers, json=payload, timeout=1.5)
+
+                # Automatic fallback if database schema does not yet have newer columns (e.g. 'wh')
+                if res.status_code == 400 and not self.schema_fallback_active:
+                    print("[SUPABASE NOTICE] Retrying without extended columns ('wh')...")
+                    self.schema_fallback_active = True
+
+                if self.schema_fallback_active and "wh" in payload:
+                    fallback_payload = {k: v for k, v in payload.items() if k != "wh"}
+                    self.http_session.post(endpoint, headers=headers, json=fallback_payload, timeout=1.5)
+
+            except requests.RequestException as e:
+                print(f"[NETWORK WARN] Supabase upload timeout/error (saved in CSV): {e}")
+            finally:
+                self.upload_queue.task_done()
+
+    def process_line(self, raw_line):
+        if not raw_line.startswith("{") or not raw_line.endswith("}"):
             return
 
         try:
-            res = requests.post(self.rest_url, json=payload, headers=self.headers, timeout=2.0)
-            if res.status_code in (200, 201, 204):
-                return
+            data = json.loads(raw_line)
+        except json.JSONDecodeError:
+            return
 
-            # If Supabase complains about missing columns, fall back to core columns
-            if res.status_code == 400 and not self.schema_fallback_active:
-                print(f"[SUPABASE SCHEMA NOTICE] Database schema missing new columns: {res.text}")
-                print("[SUPABASE FALLBACK] Retrying with core telemetry schema until migration is run...")
-                self.schema_fallback_active = True
-                legacy_payload = {
-                    "id": payload["id"],
-                    "amps": payload["amps"],
-                    "rssi": payload["rssi"],
-                    "snr": payload["snr"],
-                    "created_at": payload["created_at"]
-                }
-                requests.post(self.rest_url, json=legacy_payload, headers=self.headers, timeout=2.0)
-            else:
-                print(f"[SUPABASE ERROR] Status {res.status_code}: {res.text}")
+        if "error" in data:
+            print(f"[RX HARDWARE ERR] {data}")
+            return
 
-        except Exception as e:
-            print(f"[SUPABASE EXCEPTION] {e}")
+        # Flexible field extraction (supports v2.1 and legacy field names)
+        packet_id = int(data.get("id") or data.get("packet_id") or 0)
+        amps      = float(data.get("amps") or data.get("current") or 0.0)
+        volts     = float(data.get("volts") or data.get("voltage") or 0.0)
+        watts     = float(data.get("watts") or data.get("power") or (volts * amps))
+        wh        = float(data.get("wh") or data.get("watt_hours") or 0.0)
+        speed_h   = float(data.get("speed_h") or data.get("speed_hall") or 0.0)
+        speed_g   = float(data.get("speed_g") or data.get("speed_gps") or 0.0)
+        lat       = float(data.get("lat") or data.get("latitude") or 0.0)
+        lng       = float(data.get("lng") or data.get("longitude") or 0.0)
+        sats      = int(data.get("sats") or data.get("satellites") or 0)
+        rssi      = int(data.get("rssi") or 0)
+        snr       = float(data.get("snr") or 0.0)
+
+        # Packet gap diagnostics
+        if self.last_packet_id >= 0 and packet_id > (self.last_packet_id + 1):
+            gap = packet_id - (self.last_packet_id + 1)
+            print(f"⚠️  PACKET GAP: {gap} packet(s) dropped between #{self.last_packet_id} and #{packet_id}")
+        self.last_packet_id = packet_id
+
+        iso_time = datetime.now(timezone.utc).isoformat()
+
+        # 1. Always write to local CSV immediately (Zero data loss guarantee)
+        with open(self.csv_backup, "a", encoding="utf-8") as f:
+            f.write(
+                f"{iso_time},{packet_id},{volts:.2f},{amps:.2f},{watts:.1f},{wh:.1f},"
+                f"{speed_h:.1f},{speed_g:.1f},{lat:.6f},{lng:.6f},{sats},{rssi},{snr:.1f}\n"
+            )
+
+        # 2. Enqueue for non-blocking Supabase Realtime upload
+        if self.live_upload_enabled:
+            payload = {
+                "packet_id": packet_id,
+                "volts": round(volts, 2),
+                "amps": round(amps, 2),
+                "watts": round(watts, 1),
+                "wh": round(wh, 1),
+                "speed_h": round(speed_h, 1),
+                "speed_g": round(speed_g, 1),
+                "lat": round(lat, 6),
+                "lng": round(lng, 6),
+                "sats": sats,
+                "rssi": rssi,
+                "snr": round(snr, 1),
+                "created_at": iso_time,
+            }
+            if not self.upload_queue.full():
+                self.upload_queue.put_nowait(payload)
+
+        mode_tag = "[LIVE]" if self.live_upload_enabled else "[CSV]"
+        print(
+            f"[{datetime.now().strftime('%H:%M:%S')}] PKT #{packet_id:<5} | "
+            f"{volts:>5.2f}V | {amps:>5.2f}A | {watts:>6.1f}W | {wh:>5.1f}Wh | "
+            f"SpdH: {speed_h:>4.1f}mph | GPS: {speed_g:>4.1f}mph | "
+            f"Sats: {sats:>2} | RSSI: {rssi:>4}dBm -> {mode_tag}"
+        )
 
     def run(self):
-        print("\n========================================================")
-        print(f"  JC-APEX BRIDGE - {self.mode.upper()} MODE")
-        print("  LISTENING FOR 48V LORA DATA                      ")
-        print("========================================================\n")
-
-        max_retries = 10
-        retry_delay = 5
-
-        while max_retries > 0 and self.running:
-            if not self.connect():
-                print(f"[RECONNECT] Retrying in {retry_delay}s... (attempts remaining: {max_retries})")
-                time.sleep(retry_delay)
-                retry_delay = min(retry_delay * 2, 60)  # Exponential backoff, max 60s
-                max_retries -= 1
-                continue
-
-            # Give serial port a moment to stabilize
-            time.sleep(1.0)
-            self.serial_conn.reset_input_buffer()
+        retry_delay = 3
+        while self.running:
+            if not self.ser or not self.ser.is_open:
+                if not self.connect():
+                    print(f"[RECONNECT] Retrying serial connection in {retry_delay}s...")
+                    time.sleep(retry_delay)
+                    retry_delay = min(retry_delay * 2, 30)
+                    continue
+                retry_delay = 3
 
             try:
-                while self.running and self.serial_conn and self.serial_conn.is_open:
-                    try:
-                        line_bytes = self.serial_conn.readline()
-                        if not line_bytes:
-                            continue
-
-                        line_str = line_bytes.decode('utf-8', errors='ignore').strip()
-                        if not line_str:
-                            continue
-
-                        # Defensive check: Only accept curly-braced JSON strings
-                        if not line_str.startswith('{') or not line_str.endswith('}'):
-                            continue
-
-                        try:
-                            data = json.loads(line_str)
-                        except json.JSONDecodeError:
-                            # Gracefully ignore partial or corrupted serial lines
-                            continue
-
-                        # Extract packet metrics supporting both primary and legacy keys
-                        packet_id = int(data.get("id") or data.get("packet_id", 0))
-                        amps = float(data.get("amps") or data.get("current", 0.0))
-                        volts = float(data.get("volts") or data.get("voltage", 0.0))
-
-                        # Derive or extract power in Watts
-                        if 'watts' in data:
-                            watts = float(data['watts'])
-                        elif 'power' in data:
-                            watts = float(data['power'])
-                        else:
-                            watts = round(volts * amps, 2)
-
-                        speed_h = float(data.get("speed_h") or data.get("speed_hall", 0.0))
-                        speed_g = float(data.get("speed_g") or data.get("speed_gps", 0.0))
-                        lat = float(data.get("lat") or data.get("latitude", 0.0))
-                        lng = float(data.get("lng") or data.get("longitude", 0.0))
-                        sats = int(data.get("sats", 0))
-                        rssi = int(data.get("rssi", -80))
-                        snr = float(data.get("snr", 9.0))
-                        iso_time = datetime.now(timezone.utc).isoformat()
-
-                        self.packet_count += 1
-
-                        # Check for dropped packet gaps
-                        if self.last_packet_id >= 0 and packet_id > (self.last_packet_id + 1):
-                            gap = packet_id - (self.last_packet_id + 1)
-                            print(f"⚠️  PACKET GAP: {gap} packet(s) dropped between #{self.last_packet_id} and #{packet_id}")
-
-                        self.last_packet_id = packet_id
-
-                        # Console Telemetry Visualizer
-                        mode_tag = "[LIVE]" if self.mode == 'online' else "[CSV]"
-                        print(f"[{datetime.now().strftime('%H:%M:%S')}] PKT #{packet_id:<5} | "
-                              f"{volts:>5.1f}V | {amps:>5.2f}A | {watts:>6.1f}W | "
-                              f"SpdH: {speed_h:>4.1f}mph | GPS: {speed_g:>4.1f}mph | "
-                              f"Lat: {lat:>8.6f} | Lon: {lng:>9.6f} | Sats: {sats:>2} | "
-                              f"RSSI: {rssi:>4}dBm -> {mode_tag}")
-
-                        # 1. Append to local CSV backup
-                        try:
-                            with open(self.csv_backup, 'a') as f:
-                                f.write(f"{iso_time},{packet_id},{volts:.2f},{amps:.2f},{watts:.2f},"
-                                        f"{speed_h:.2f},{speed_g:.2f},{lat:.6f},{lng:.6f},{sats},{rssi},{snr:.1f}\n")
-                        except Exception:
-                            pass
-
-                        # 2. Push to Supabase (online mode only)
-                        if self.mode == 'online':
-                            db_payload = {
-                                "id": packet_id,
-                                "volts": round(volts, 2),
-                                "amps": round(amps, 2),
-                                "watts": round(watts, 2),
-                                "speed_h": round(speed_h, 2),
-                                "speed_g": round(speed_g, 2),
-                                "latitude": round(lat, 6),
-                                "longitude": round(lng, 6),
-                                "sats": sats,
-                                "rssi": rssi,
-                                "snr": round(snr, 1),
-                                "created_at": iso_time
-                            }
-
-                            if self.schema_fallback_active:
-                                legacy_payload = {
-                                    "id": packet_id,
-                                    "amps": round(amps, 2),
-                                    "rssi": rssi,
-                                    "snr": round(snr, 1),
-                                    "created_at": iso_time
-                                }
-                                self.push_to_supabase(legacy_payload)
-                            else:
-                                self.push_to_supabase(db_payload)
-
-                    except serial.SerialException as e:
-                        print(f"[SERIAL ERROR] Connection lost: {e}")
-                        if self.serial_conn:
-                            self.serial_conn.close()
-                        print("[RECONNECT] Reconnecting in 2 seconds...")
-                        time.sleep(2)
-                        break
-
-            except KeyboardInterrupt:
-                print("\n[SHUTDOWN] Stopping telemetry bridge...")
-                self.running = False
-                break
+                raw_bytes = self.ser.readline()
+                if not raw_bytes:
+                    continue
+                line = raw_bytes.decode("utf-8", errors="ignore").strip()
+                if line:
+                    self.process_line(line)
+            except serial.SerialException as e:
+                print(f"[SERIAL DISCONNECTED] {e}. Attempting automatic reconnect...")
+                try:
+                    self.ser.close()
+                except Exception:
+                    pass
+                self.ser = None
+                time.sleep(2)
             except Exception as e:
-                print(f"[BRIDGE EXCEPTION] {e}")
-                time.sleep(0.1)
+                print(f"[BRIDGE ERR] Unexpected error: {e}")
 
-        if self.serial_conn and self.serial_conn.is_open:
-            self.serial_conn.close()
-            print("[SERIAL] Port closed.")
-
-        print(f"\n[SESSION COMPLETE] Total packets received: {self.packet_count}")
-        print(f"[CSV DATA] Saved to: {self.csv_backup}")
+    def stop(self):
+        print("\n[SHUTDOWN] Closing JC-APEX Telemetry Bridge...")
+        self.running = False
+        if self.ser and self.ser.is_open:
+            self.ser.close()
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="JC-APEX USB Serial Bridge")
-    parser.add_argument('--mode', type=str, default='online', choices=['online', 'offline'],
-                        help="Operation mode: online (Supabase) or offline (CSV only)")
-    parser.add_argument('--port', type=str, default=None, help="Serial port (e.g. COM3 or /dev/ttyUSB0)")
+def main():
+    parser = argparse.ArgumentParser(description="JC-APEX Unified Telemetry Bridge v2.1")
+    parser.add_argument("--mode", choices=["online", "offline"], default="online", help="Operation mode")
+    parser.add_argument("--port", type=str, default=None, help="Explicit serial port (e.g. COM3 or /dev/ttyUSB0)")
+    parser.add_argument("--baud", type=int, default=115200, help="Serial baud rate (default: 115200)")
     args = parser.parse_args()
 
-    bridge = UnifiedTelemetryBridge(mode=args.mode, serial_port=args.port)
+    print("=" * 70)
+    print("JC-APEX TELEMETRY BRIDGE v2.1 (NON-BLOCKING ASYNC QUEUE)")
+    print("=" * 70)
+    print(f"Mode: {args.mode.upper()}")
+    print(f"Baud Rate: {args.baud}")
+    print("=" * 70)
+
+    bridge = UnifiedTelemetryBridge(mode=args.mode, serial_port=args.port, baud_rate=args.baud)
+
+    def sigint_handler(sig, frame):
+        bridge.stop()
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, sigint_handler)
     bridge.run()
+
+
+if __name__ == "__main__":
+    main()
