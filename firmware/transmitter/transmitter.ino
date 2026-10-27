@@ -1,158 +1,119 @@
 /**
  * ============================================================================
- * JC-APEX TELEMETRY SYSTEM - TRANSMITTER (TX) FIRMWARE
- * ELECTROTHON 48V TRACTIVE PACK, MOTOR HALL & GPS INTEGRATION
+ * JC-APEX TELEMETRY SYSTEM — RECEIVER (RX) FIRMWARE v2.0
+ * ELECTRATHON AMERICA PIT-LANE GATEWAY & OLED MONITOR
  * ============================================================================
- * Hardware: Heltec WiFi LoRa 32 (V3) [ESP32-S3 + Semtech SX1262]
- * Target Vehicle: Electrothon 48V DC Competition Car
- * Frequency: 915.0 MHz (US915 Band)
+ * Target MCU : Heltec WiFi LoRa 32 (V3) [ESP32-S3 + Semtech SX1262]
+ * Interface  : USB-C Serial JSON Stream (115200 baud) for Python Dashboard
+ * RF Link    : 915.0 MHz | BW 125 kHz | SF7 | CR 4/5 | Sync 0x12
  * ============================================================================
  */
 
 #include <Arduino.h>
-#include <RadioLib.h>
-#include <TinyGPSPlus.h>
 #include <Wire.h>
+#include <RadioLib.h>
+#include <ArduinoJson.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
 // ============================================================================
-// 1. PIN ALLOCATION & HARDWARE CONSTANTS
+// 1. HARDWARE PIN MAPPING (HELTEC WIFI LORA 32 V3)
 // ============================================================================
 
-// ADC Pins (ESP32-S3 ADC1)
-#define CURRENT_SENSOR_PIN    1   // GPIO 1 (ADC1_CH0) - WCS1600 Current Sensor
-#define BATTERY_VOLTAGE_PIN   19  // GPIO 19 - 48V Battery Resistor Divider (820k / 47k)
+#define SERIAL_BAUD           115200
 
-// Hall Effect Speed Sensor
-// CONFIGURATION: GPIO 7 is Digital Output for Hall effect sensor
-// NOTE: The code configures GPIO 7 as INPUT_PULLUP with interrupt (FALLING edge)
-// This is the standard way to read a Hall sensor output (typically open-drain or active-low)
-#define HALL_SENSOR_PIN       7   // GPIO 7 - Hall effect sensor (configured as INPUT_PULLUP with interrupt)
-
-// GPS Hardware UART (Serial1)
-// PIN SELECTION (ACTUAL HARDWARE):
-// - GPS_TX: GPIO 17 (ESP32 TX -> GPS RX)
-// - GPS_RX: GPIO 15 (ESP32 RX <- GPS TX)
-// These pins avoid collision with:
-//   - LoRa SX1262: GPIO 8, 12, 13, 14
-//   - OLED Display: GPIO 17 (SDA), 18 (SCL), 21 (RST), 36 (Vext) - CONFLICT ON GPIO17!
-// IMPORTANT: GPS TX uses GPIO17 which is the OLED SDA pin on Heltec V3.
-// This means OLED cannot be used simultaneously with GPS unless we move OLED to different pins.
-// For now, OLED is disabled or moved to alternative pins if available.
-//   - ADC Inputs: GPIO 1 (Current), GPIO 19 (Voltage)
-//   - Hall Sensor: GPIO 7
-//   - USB/Strapping: GPIO 0, 45, 46, 47, 48
-// WIRING: Connect GPS module RX to Heltec GPIO17, GPS module TX to Heltec GPIO15
-#define GPS_TX_PIN            17  // ESP32 TX -> GPS RX (GPIO 17)
-#define GPS_RX_PIN            15  // ESP32 RX <- GPS TX (GPIO 15)
-#define GPS_BAUD_RATE         9600
-
-// SX1262 LoRa Pinout for Heltec WiFi LoRa 32 (V3)
+// Semtech SX1262 LoRa Pins
 #define LORA_NSS              8
 #define LORA_DIO1             14
 #define LORA_NRST             12
 #define LORA_BUSY             13
 
-// Onboard OLED Pins & Power Control (Heltec V3 onboard OLED uses GPIO17/18)
-// NOTE: GPS TX uses GPIO17 which conflicts with OLED SDA.
-// OLED will not work simultaneously with GPS unless GPS is moved to different pins.
-// For now, OLED initialization will be attempted but may not display properly.
-#define OLED_SDA              17  // OLED SDA pin (CONFLICTS with GPS TX on GPIO17)
-#define OLED_SCL              18  // OLED SCL pin
+//LoRa RF Parameters (Matches Transmitter v2.0)
+#define LORA_FREQ             915.0f
+#define LORA_BW               125.0f
+#define LORA_SF               7
+#define LORA_CR               5
+#define LORA_SYNC_WORD        0x12
+#define LORA_TX_POWER         22
+#define LORA_PREAMBLE         8
+
+// Onboard SSD1306 128x64 OLED Pins
+#define OLED_SDA              17
+#define OLED_SCL              18
 #define OLED_RST              21
-#define VEXT_PIN              36
+#define PIN_VEXT              36
 #define SCREEN_WIDTH          128
 #define SCREEN_HEIGHT         64
 
-// LoRa RF Parameters (US 915 MHz)
-#define LORA_FREQ             915.0f  // MHz
-#define LORA_BANDWIDTH        125.0f  // kHz
-#define LORA_SPREAD_FACTOR    7       // SF7 (high speed, 5 Hz capable)
-#define LORA_CODE_RATE        5       // 4/5
-#define LORA_SYNC_WORD        0x12    // Private network sync word
-#define LORA_TX_POWER         22      // dBm (max SX1262 power)
-#define LORA_PREAMBLE_LEN     8       // symbols
+#define LINK_TIMEOUT_MS       2500UL  // Warn on OLED if no packet for 2.5 seconds
 
 // ============================================================================
-// 2. MATHEMATICAL CALIBRATION & FILTER PARAMETERS
-// ============================================================================
-
-// ADC Conversion Constants (12-bit, 3.3V reference)
-const float ADC_REF_VOLTAGE = 3.3f;
-const float ADC_MAX_COUNT = 4095.0f;
-
-// 48V Battery Voltage Divider (Calibrated to 55.0V Multimeter Reading)
-// Divider: 820k (high side) / 47k (low side) on GPIO 19
-// Previous raw reading: 8.9V -> True Multimeter: 55.0V
-// New Factor = 20.24 * (55.0 / 8.9) = 125.08f
-const float BATT_VOLTAGE_DIVIDER_FACTOR = 125.08f;
-
-// WCS1600 Current Sensor
-const float CURRENT_R1 = 10000.0f;
-const float CURRENT_R2 = 18000.0f;
-const float CURRENT_VOLTAGE_DIVIDER_FACTOR = (CURRENT_R1 + CURRENT_R2) / CURRENT_R2;
-const float CURRENT_SENSITIVITY_MV_PER_AMP = 22.0f; // WCS1600 standard sensitivity (22 mV/A)
-const float CURRENT_EMA_ALPHA = 0.25f;              // EMA filter coefficient (0.0 to 1.0)
-
-// Dynamic Auto-Zero Calibration baseline for current sensor
-float zeroCurrentOffsetVolts = 1.65f;
-float emaFilteredCurrentAmps = 0.0f;
-
-// Vehicle Wheel & Motor Hall Kinematics
-const float WHEEL_CIRCUMFERENCE_METERS = 1.55f; // Standard ~20-inch Electrothon bicycle wheel (~1.55 m)
-const float GEAR_RATIO = 1.0f;                 // 1.0 if sensor is on wheel hub
-const float HALL_PULSES_PER_REV = 1.0f;        // 1 magnet on wheel = 1 pulse per rev
-const unsigned long HALL_CALC_INTERVAL_MS = 200; // Calculate speed synchronized with 5 Hz cycle
-
-// Telemetry Transmission Loop Rate
-const unsigned long TX_INTERVAL_MS = 200; // 200 ms = 5 Hz update rate
-
-// ============================================================================
-// 3. HARDWARE & PERIPHERAL INSTANCES
+// 2. INSTANCES & TELEMETRY STATE
 // ============================================================================
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RST);
 SX1262 radio = new Module(LORA_NSS, LORA_DIO1, LORA_NRST, LORA_BUSY);
-TinyGPSPlus gps;
 
-// State Variables
-uint32_t packetId = 0;
-unsigned long lastTxTime = 0;
-bool oledReady = false;
+volatile bool packetReadyFlag = false;
+bool          oledReady       = false;
 
-// Hall Effect Speed Sensor Interrupt State
-volatile unsigned long hallPulseCounter = 0;
-unsigned long lastHallPulseTime = 0;
-unsigned long lastHallCalcTime = 0;
-unsigned long prevHallPulses = 0;
-float currentSpeedHallMph = 0.0f;
-float speed_gps = 0.0f;
+struct TelemetryFrame {
+  uint32_t id        = 0;
+  float    amps      = 0.0f;
+  float    volts     = 0.0f;
+  float    watts     = 0.0f;
+  float    speedHall = 0.0f;
+  float    speedGps  = 0.0f;
+  double   lat       = 0.0;
+  double   lng       = 0.0;
+  uint8_t  sats      = 0;
+  float    wh        = 0.0f;
+  int      rssi      = 0;
+  float    snr       = 0.0f;
+} rxData;
+
+uint32_t totalPacketsOk     = 0;
+uint32_t totalPacketsBadCs  = 0;
+uint32_t lastPacketRxMs     = 0;
 
 // ============================================================================
-// 4. INTERRUPT SERVICE ROUTINE (ISR)
+// 3. INTERRUPT & CHECKSUM VALIDATION
 // ============================================================================
 
-void IRAM_ATTR countPulse() {
-  unsigned long nowUs = micros();
-  static unsigned long lastInterruptTimeUs = 0;
-  if (nowUs - lastInterruptTimeUs > 3000) {
-    hallPulseCounter++;
-    lastInterruptTimeUs = nowUs;
+void IRAM_ATTR onPacketReceivedISR() {
+  packetReadyFlag = true;
+}
+
+uint8_t computeXorChecksum(const char* str) {
+  uint8_t cs = 0;
+  while (*str) {
+    cs ^= (uint8_t)(*str++);
   }
+  return cs;
+}
+
+bool verifyAndStripChecksum(char* buffer) {
+  char* starPtr = strchr(buffer, '*');
+  if (starPtr == nullptr) {
+    // Legacy packet without checksum — accept for backward compatibility
+    return true;
+  }
+
+  uint8_t expectedCs = (uint8_t)strtoul(starPtr + 1, nullptr, 16);
+  *starPtr = '\0'; // Terminate string at '*' so only payload is checksummed & parsed
+  uint8_t actualCs = computeXorChecksum(buffer);
+  return (expectedCs == actualCs);
 }
 
 // ============================================================================
-// 5. HELPER FUNCTIONS: POWER & OLED
+// 4. OLED PIT-LANE DISPLAY
 // ============================================================================
-
-void powerOnVext() {
-  pinMode(VEXT_PIN, OUTPUT);
-  digitalWrite(VEXT_PIN, LOW); // LOW activates Vext power on Heltec V3
-  delay(50);
-}
 
 void initOLED() {
+  pinMode(PIN_VEXT, OUTPUT);
+  digitalWrite(PIN_VEXT, LOW);
+  delay(50);
+
   Wire.begin(OLED_SDA, OLED_SCL);
   if (display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
     oledReady = true;
@@ -160,16 +121,16 @@ void initOLED() {
     display.setTextColor(SSD1306_WHITE);
     display.setTextSize(1);
     display.setCursor(0, 0);
-    display.println(F("JC-APEX ELECTROTHON"));
-    display.setCursor(0, 12);
-    display.println(F("48V Live Telemetry"));
-    display.setCursor(0, 24);
-    display.println(F("Calibrating sensors..."));
+    display.println(F("JC-APEX PIT RECEIVER"));
+    display.setCursor(0, 14);
+    display.println(F("915 MHz LoRa Active"));
+    display.setCursor(0, 28);
+    display.println(F("Waiting for car TX..."));
     display.display();
   }
 }
 
-void updateOLED(uint32_t pktId, float volts, float amps, float watts, float speedH, float speedG, int txStatus) {
+void updateOLED(bool linkActive) {
   if (!oledReady) return;
   display.clearDisplay();
   display.setTextColor(SSD1306_WHITE);
@@ -177,228 +138,150 @@ void updateOLED(uint32_t pktId, float volts, float amps, float watts, float spee
   // Header
   display.setTextSize(1);
   display.setCursor(0, 0);
-  display.printf("JC-APEX TX #%lu", pktId);
+  if (linkActive) {
+    display.printf("RX #%lu | %ddBm", rxData.id, rxData.rssi);
+  } else {
+    display.printf("SIGNAL LOST (%lus)", (millis() - lastPacketRxMs) / 1000UL);
+  }
   display.drawLine(0, 9, 127, 9, SSD1306_WHITE);
 
-  // Live Electrical (Volts & Amps)
+  // Electricals
   display.setCursor(0, 12);
-  display.printf("%.1fV | %.1fA", volts, amps);
+  display.printf("%5.1fV | %5.2fA | %.0fWh", rxData.volts, rxData.amps, rxData.wh);
 
-  // Live Power
+  // Power
   display.setCursor(0, 24);
   display.setTextSize(2);
-  if (watts >= 1000.0f) {
-    display.printf("%.2f kW", watts / 1000.0f);
+  if (rxData.watts >= 1000.0f) {
+    display.printf("%.2f kW", rxData.watts / 1000.0f);
   } else {
-    display.printf("%.0f W", watts);
+    display.printf("%.0f W", rxData.watts);
   }
 
-  // Live Speeds
+  // Speeds
   display.setTextSize(1);
   display.setCursor(0, 43);
-  display.printf("SpdH: %.1f | GPS: %.1f", speedH, speedG);
+  display.printf("Hall:%.1f | GPS:%.1fmph", rxData.speedHall, rxData.speedGps);
 
-  // Status & GPS Fix
+  // Link Quality Footer
   display.setCursor(0, 55);
-  if (txStatus == RADIOLIB_ERR_NONE) {
-    display.printf("TX OK | GPS:%s", gps.location.isValid() ? "LOCK" : "SEARCH");
-  } else {
-    display.printf("TX ERR %d", txStatus);
-  }
+  display.printf("SNR:%.1fdB | OK:%lu", rxData.snr, totalPacketsOk);
 
   display.display();
 }
 
 // ============================================================================
-// 6. SENSOR MEASUREMENT & MATHEMATICAL PROCESSING
+// 5. PACKET PARSER & JSON SERIALIZER
 // ============================================================================
 
-void calibrateCurrentSensorZero() {
-  Serial.println(F("[CALIB] Sampling 100 readings for WCS1600 zero-current offset..."));
-  float totalVolts = 0.0f;
-  const int NUM_SAMPLES = 100;
+void parseAndPublishPacket(String& rawStr) {
+  char buf[160];
+  rawStr.toCharArray(buf, sizeof(buf));
 
-  for (int i = 0; i < NUM_SAMPLES; i++) {
-    int rawAdc = analogRead(CURRENT_SENSOR_PIN);
-    float pinVolts = ((float)rawAdc * ADC_REF_VOLTAGE) / ADC_MAX_COUNT;
-    float sensorVolts = pinVolts * CURRENT_VOLTAGE_DIVIDER_FACTOR;
-    totalVolts += sensorVolts;
-    delay(10);
+  if (!verifyAndStripChecksum(buf)) {
+    totalPacketsBadCs++;
+    return;
   }
 
-  zeroCurrentOffsetVolts = totalVolts / (float)NUM_SAMPLES;
-  Serial.printf("[CALIB OK] Zero-Current Baseline = %.4f V\n", zeroCurrentOffsetVolts);
-}
+  char* savePtr = nullptr;
+  char* token   = strtok_r(buf, ",", &savePtr);
+  int   field   = 0;
 
-float readCurrentSensor() {
-  int rawAdc = analogRead(CURRENT_SENSOR_PIN);
-  float pinVolts = ((float)rawAdc * ADC_REF_VOLTAGE) / ADC_MAX_COUNT;
-  float trueSensorVolts = pinVolts * CURRENT_VOLTAGE_DIVIDER_FACTOR;
-
-  float rawCurrentAmps = (trueSensorVolts - zeroCurrentOffsetVolts) * 1000.0f / CURRENT_SENSITIVITY_MV_PER_AMP;
-  if (rawCurrentAmps < 0.0f) {
-    rawCurrentAmps = 0.0f;
-  }
-
-  emaFilteredCurrentAmps = (CURRENT_EMA_ALPHA * rawCurrentAmps) + ((1.0f - CURRENT_EMA_ALPHA) * emaFilteredCurrentAmps);
-  return emaFilteredCurrentAmps;
-}
-
-float readBatteryVoltage() {
-  int rawAdc = analogRead(BATTERY_VOLTAGE_PIN);
-  float trueVoltage = ((float)rawAdc * 3.3f / 4095.0f) * BATT_VOLTAGE_DIVIDER_FACTOR;
-
-  if (trueVoltage < 0.5f) {
-    trueVoltage = 0.0f;
-  }
-
-  return trueVoltage;
-}
-
-void updateHallSpeed() {
-  unsigned long now = millis();
-  unsigned long dtMs = now - lastHallCalcTime;
-
-  if (dtMs >= HALL_CALC_INTERVAL_MS) {
-    noInterrupts();
-    unsigned long currentPulses = hallPulseCounter;
-    interrupts();
-
-    unsigned long deltaPulses = currentPulses - prevHallPulses;
-    prevHallPulses = currentPulses;
-    lastHallCalcTime = now;
-
-    if (deltaPulses == 0) {
-      currentSpeedHallMph = 0.0f;
-    } else {
-      float wheelRpm = ((float)deltaPulses / HALL_PULSES_PER_REV) * (60000.0f / (float)dtMs) / GEAR_RATIO;
-      float speedMps = (wheelRpm * WHEEL_CIRCUMFERENCE_METERS) / 60.0f;
-      currentSpeedHallMph = speedMps * 2.23694f;
+  while (token != nullptr) {
+    switch (field) {
+      case 0: rxData.id        = (uint32_t)strtoul(token, nullptr, 10); break;
+      case 1: rxData.amps      = strtof(token, nullptr); break;
+      case 2: rxData.volts     = strtof(token, nullptr); break;
+      case 3: rxData.watts     = strtof(token, nullptr); break;
+      case 4: rxData.speedHall = strtof(token, nullptr); break;
+      case 5: rxData.speedGps  = strtof(token, nullptr); break;
+      case 6:
+        rxData.lat = strtod(token, nullptr);
+        if (rxData.lat < -90.0 || rxData.lat > 90.0) rxData.lat = 0.0;
+        break;
+      case 7:
+        rxData.lng = strtod(token, nullptr);
+        if (rxData.lng < -180.0 || rxData.lng > 180.0) rxData.lng = 0.0;
+        break;
+      case 8: rxData.sats      = (uint8_t)atoi(token); break;
+      case 9: rxData.wh        = strtof(token, nullptr); break;
+      default: break;
     }
+    token = strtok_r(nullptr, ",", &savePtr);
+    field++;
   }
-}
 
-void updateGPS() {
-  while (Serial1.available() > 0) {
-    gps.encode(Serial1.read());
-  }
+  // Require at least the core 6 telemetry fields to be valid
+  if (field < 6) return;
+
+  // Enforce physical consistency (Watts = Volts * Amps)
+  rxData.watts = rxData.volts * rxData.amps;
+  rxData.rssi  = radio.getRSSI();
+  rxData.snr   = radio.getSNR();
+
+  totalPacketsOk++;
+  lastPacketRxMs = millis();
+
+  // Serialize clean JSON for Python telemetry bridge
+  StaticJsonDocument<384> doc;
+  doc["id"]      = rxData.id;
+  doc["amps"]    = serialized(String(rxData.amps, 2));
+  doc["volts"]   = serialized(String(rxData.volts, 2));
+  doc["watts"]   = serialized(String(rxData.watts, 1));
+  doc["wh"]      = serialized(String(rxData.wh, 1));
+  doc["speed_h"] = serialized(String(rxData.speedHall, 1));
+  doc["speed_g"] = serialized(String(rxData.speedGps, 1));
+  doc["lat"]     = serialized(String(rxData.lat, 6));
+  doc["lng"]     = serialized(String(rxData.lng, 6));
+  doc["sats"]    = rxData.sats;
+  doc["rssi"]    = rxData.rssi;
+  doc["snr"]     = serialized(String(rxData.snr, 1));
+
+  serializeJson(doc, Serial);
+  Serial.println();
+
+  updateOLED(true);
 }
 
 // ============================================================================
-// 7. SETUP
+// 6. SETUP & MAIN LOOP
 // ============================================================================
 
 void setup() {
-  Serial.begin(115200);
-  delay(500);
+  Serial.begin(SERIAL_BAUD);
+  delay(400);
 
-  Serial.println(F("\n========================================================"));
-  Serial.println(F("  JC-APEX ELECTROTHON TELEMETRY TRANSMITTER (48V TX)   "));
-  Serial.println(F("========================================================"));
+  initOLED();
 
-  // OLED DISABLED DUE TO GPIO17 CONFLICT WITH GPS TX
-  // powerOnVext();
-  // initOLED();
-  Serial.println(F("[OLED] DISABLED - GPIO17 conflicts with GPS TX"));
-
-  analogReadResolution(12);
-  analogSetPinAttenuation(CURRENT_SENSOR_PIN, ADC_11db);
-  analogSetPinAttenuation(BATTERY_VOLTAGE_PIN, ADC_11db);
-
-  pinMode(7, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(7), countPulse, FALLING);
-  Serial.printf("[HALL] Interrupt attached: GPIO 7, countPulse, FALLING\n");
-
-  Serial1.begin(9600, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
-  Serial.printf("[GPS] Serial1 initialized on RX: GPIO %d, TX: GPIO %d at 9600 baud\n", GPS_RX_PIN, GPS_TX_PIN);
-  Serial.printf("[GPS] WARNING: GPIO %d (TX) conflicts with OLED SDA - OLED may not work\n", GPS_TX_PIN);
-
-  calibrateCurrentSensorZero();
-
-  Serial.print(F("[LORA] Initializing SX1262 at "));
-  Serial.print(LORA_FREQ);
-  Serial.println(F(" MHz..."));
-
-  int state = radio.begin(
-    LORA_FREQ,
-    LORA_BANDWIDTH,
-    LORA_SPREAD_FACTOR,
-    LORA_CODE_RATE,
-    LORA_SYNC_WORD,
-    LORA_TX_POWER,
-    LORA_PREAMBLE_LEN
-  );
-
+  int state = radio.begin(LORA_FREQ, LORA_BW, LORA_SF, LORA_CR, LORA_SYNC_WORD, LORA_TX_POWER, LORA_PREAMBLE);
   if (state == RADIOLIB_ERR_NONE) {
-    Serial.println(F("[LORA OK] SX1262 online and ready for transmission."));
+    radio.setDio1Action(onPacketReceivedISR);
+    radio.startReceive();
   } else {
-    Serial.printf("[LORA ERROR] Failed to initialize SX1262, code: %d\n", state);
-    if (oledReady) {
-      display.clearDisplay();
-      display.setCursor(0, 0);
-      display.println(F("LoRa INIT ERROR"));
-      display.printf("Code: %d", state);
-      display.display();
-    }
-    while (true) {
-      delay(1000);
-    }
+    Serial.printf("{\"error\":\"LORA_INIT_FAIL\",\"code\":%d}\n", state);
+    while (true) { delay(1000); }
   }
-
-  Serial.println(F("[READY] Starting 5 Hz Electrothon telemetry loop...\n"));
-  lastTxTime = millis();
-  lastHallCalcTime = millis();
 }
 
-// ============================================================================
-// 8. MAIN LOOP
-// ============================================================================
-
 void loop() {
-  updateGPS();
+  if (packetReadyFlag) {
+    packetReadyFlag = false;
 
-  unsigned long now = millis();
-
-  if (now - lastTxTime >= TX_INTERVAL_MS) {
-    lastTxTime = now;
-
-    updateHallSpeed();
-
-    float currentAmps = readCurrentSensor();
-    float batteryVolts = readBatteryVoltage();
-    float powerWatts = batteryVolts * currentAmps;
-
-    speed_gps = gps.speed.isValid() ? (float)gps.speed.mph() : 0.0f;
-
-    // GPS position (send last-known-good position, never block loop)
-    float lat = gps.location.isValid() ? (float)gps.location.lat() : 0.0f;
-    float lon = gps.location.isValid() ? (float)gps.location.lng() : 0.0f;
-    uint8_t sats = gps.satellites.isValid() ? gps.satellites.value() : 0;
-
-    char payload[128];
-    snprintf(payload, sizeof(payload), "%lu,%.2f,%.2f,%.2f,%.2f,%.2f,%.6f,%.6f,%d",
-             packetId,
-             currentAmps,
-             batteryVolts,
-             powerWatts,
-             currentSpeedHallMph,
-             speed_gps,
-             lat,
-             lon,
-             sats);
-
-    int state = radio.transmit(payload);
-
-    if (state == RADIOLIB_ERR_NONE) {
-      Serial.printf("[TX #%lu] %5.1fV | %5.2fA | %6.1fW | Hall: %4.1fmph | GPS: %4.1fmph | %.6f,%.6f | %d sat | OK\n",
-                    packetId, batteryVolts, currentAmps, powerWatts, currentSpeedHallMph, speed_gps, lat, lon, sats);
-    } else {
-      Serial.printf("[TX #%lu] TX FAILED (Code %d)\n", packetId, state);
+    String incomingStr;
+    int state = radio.readData(incomingStr);
+    if (state == RADIOLIB_ERR_NONE && incomingStr.length() > 0) {
+      parseAndPublishPacket(incomingStr);
     }
 
-    // OLED DISABLED DUE TO GPIO17 CONFLICT WITH GPS TX
-    // updateOLED(packetId, batteryVolts, currentAmps, powerWatts, currentSpeedHallMph, speed_gps, state);
+    radio.startReceive();
+  }
 
-    packetId++;
+  // Refresh OLED if link times out so pit crew knows car is out of range/off
+  static uint32_t lastWatchdogMs = 0;
+  if (totalPacketsOk > 0 && (millis() - lastPacketRxMs > LINK_TIMEOUT_MS)) {
+    if (millis() - lastWatchdogMs > 1000) {
+      lastWatchdogMs = millis();
+      updateOLED(false);
+    }
   }
 }
