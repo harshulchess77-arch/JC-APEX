@@ -68,8 +68,6 @@ const AuthenticatedApp = () => {
           <Route path="*"                       element={<NotFound />} />
         </Route>
       </Routes>
-      {/* Global Command Overlay - persists across all routes */}
-      <GlobalCommandOverlay />
     </RaceEngineProvider>
   );
 };
@@ -82,8 +80,10 @@ function App() {
         <QueryClientProvider client={queryClientInstance}>
           <Router>
             <AuthenticatedApp />
+            {/* DriverCommandListener at absolute root level - never unmounts */}
+            <GlobalCommandOverlay />
+            <Toaster />
           </Router>
-          <Toaster />
         </QueryClientProvider>
       </PasscodeAuthProvider>
     </AuthProvider>

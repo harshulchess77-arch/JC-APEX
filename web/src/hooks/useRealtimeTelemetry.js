@@ -84,7 +84,7 @@ export function useRealtimeTelemetry(role = 'driver') {
 
       const channel = supabase.channel('race_commands', {
         config: {
-          broadcast: { self: true },
+          broadcast: { self: true, ack: true },
           presence: { key: role },
         },
       });
