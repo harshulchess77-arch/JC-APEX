@@ -9,6 +9,7 @@ import DriverTopBar from '../components/driver/DriverTopBar';
 import DriverLeftPanel from '../components/driver/DriverLeftPanel';
 import SpeedometerPanel from '../components/driver/SpeedometerPanel';
 import DriverRightPanel from '../components/driver/DriverRightPanel';
+import { CheckCircle2 } from 'lucide-react';
 
 export default function DriverHUD() {
   const navigate = useNavigate();
@@ -115,43 +116,6 @@ export default function DriverHUD() {
 
   return (
     <div className={`min-h-screen bg-[#08090C] text-foreground flex flex-col overflow-hidden select-none ${focusMode ? 'fullscreen' : ''}`}>
-      {/* Command Banner Overlay with Clickable Touch Target */}
-      <AnimatePresence>
-        {activeCmd && activeCmd.status !== COMMAND_STATUS.EXPIRED && (
-          <motion.div
-            initial={{ opacity: 0, y: -50 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -50 }}
-            onClick={() => handleAck(activeCmd.id, cmdPayloadText)}
-            className={`fixed top-0 left-0 right-0 z-40 p-4 border-b-2 cursor-pointer shadow-2xl transition-all ${getCommandColor(cmdPayloadText).bg} ${getCommandColor(cmdPayloadText).border}`}
-          >
-            <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className={`w-3.5 h-3.5 rounded-full animate-pulse ${getCommandColor(cmdPayloadText).border.replace('border-', 'bg-')}`} />
-                <div>
-                  <div className={`text-[10px] font-mono tracking-widest ${getCommandColor(cmdPayloadText).text} uppercase font-bold`}>
-                    {activeCmd.sender || 'PIT'} COMMAND DIRECTIVE
-                  </div>
-                  <div className={`text-xl md:text-2xl font-display font-black tracking-wider ${getCommandColor(cmdPayloadText).text}`}>
-                    {cmdPayloadText}
-                  </div>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleAck(activeCmd.id, cmdPayloadText);
-                }}
-                className={`flex items-center gap-2 px-6 py-3 rounded-lg border-2 text-sm font-display font-black tracking-wider shadow-lg hover:opacity-90 active:scale-95 transition-all cursor-pointer ${getCommandColor(cmdPayloadText).btnBg} ${getCommandColor(cmdPayloadText).btnText} ${getCommandColor(cmdPayloadText).border}`}
-              >
-                <CheckCircle2 className="w-5 h-5" />
-                ACKNOWLEDGE
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Massive Fullscreen Flag Alert Overlay (Task 6) */}
       <AnimatePresence>
