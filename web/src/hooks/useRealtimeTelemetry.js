@@ -82,7 +82,7 @@ export function useRealtimeTelemetry(role = 'driver') {
         }).catch(() => {});
       }
 
-      const channel = supabase.channel('race_control', {
+      const channel = supabase.channel('race_commands', {
         config: {
           broadcast: { self: true },
           presence: { key: role },
@@ -268,7 +268,7 @@ export function useRealtimeTelemetry(role = 'driver') {
     }
 
     return command;
-  }, [role, connectionMode]);
+  }, [role, connectionMode, channelRef]);
 
   // Send acknowledgment (for driver)
   const sendAck = useCallback((commandId, commandText) => {

@@ -23,6 +23,7 @@ import AppSettings from './pages/AppSettings';
 import LiveComms from './pages/LiveComms';
 import Benchmarks from './pages/Benchmarks';
 import { RaceEngineProvider } from '@/lib/RaceEngineContext';
+import GlobalCommandOverlay from './components/driver/GlobalCommandOverlay';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings } = useAuth();
@@ -67,6 +68,8 @@ const AuthenticatedApp = () => {
           <Route path="*"                       element={<NotFound />} />
         </Route>
       </Routes>
+      {/* Global Command Overlay - persists across all routes */}
+      <GlobalCommandOverlay />
     </RaceEngineProvider>
   );
 };
