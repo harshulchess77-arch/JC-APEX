@@ -2,6 +2,7 @@
   "buildCommand": "cd web && npm run build",
   "outputDirectory": "web/dist",
   "framework": "vite",
+  "installCommand": "cd web && npm install",
   "rewrites": [
     {
       "source": "/(.*)",
