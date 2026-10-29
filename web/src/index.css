@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&family=Titillium+Web:wght@300;400;600;700&family=Kalam:wght@300;400;700&display=swap');
 @import './styles/design-tokens.css';
 
 @tailwind base;
@@ -34,9 +34,10 @@
     --chart-5: 348 91% 45%;
     --radius: 0.5rem;
     --font-mono: 'JetBrains Mono', monospace;
-    --font-sans: 'Inter', sans-serif;
+    --font-sans: 'Titillium Web', 'Inter', sans-serif;
     --font-f1: 'Rajdhani', 'Inter', sans-serif;
     --font-display: 'Orbitron', monospace;
+    --font-accent: 'Kalam', cursive;
   }
 
   .dark {

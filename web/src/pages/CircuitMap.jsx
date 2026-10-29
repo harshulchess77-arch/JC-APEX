@@ -8,6 +8,7 @@ import CircuitSVG from './circuit-map/CircuitSVG';
 import InfoPanel from './circuit-map/InfoPanel';
 import { useGpsTracking } from './circuit-map/useGpsTracking';
 import { fitGpsToSvg, getGpsBounds } from './circuit-map/gps-utils';
+import OvalTrackGeometry from '@/lib/OvalTrackGeometry';
 
 export default function CircuitMap() {
   const navigate = useNavigate();
@@ -25,6 +26,19 @@ export default function CircuitMap() {
   const drawAnimRef = useRef(null);
   const carAnimRef = useRef(null);
   const [hasPlayedIntro, setHasPlayedIntro] = useState(false);
+
+  // Oval track geometry for precise positioning
+  const trackGeometryRef = useRef(null);
+  useEffect(() => {
+    trackGeometryRef.current = new OvalTrackGeometry({
+      centerX: 250,
+      centerY: 150,
+      majorAxis: 200,
+      minorAxis: 80,
+      cornerRadius: 40,
+      trackWidth: 22,
+    });
+  }, []);
 
   // Anime.js setup with scope
   useEffect(() => {
@@ -55,10 +69,10 @@ export default function CircuitMap() {
     };
   }, [hasPlayedIntro]);
 
-  // Demo mode: simulate vehicle position on track (follows drawn track path)
-  const [demoPosition, setDemoPosition] = useState({ x: 60, y: 150, lap: 0 });
+  // Demo mode: simulate vehicle position on oval track using precise geometry
+  const [demoPosition, setDemoPosition] = useState({ x: 70, y: 150, lap: 0 });
   useEffect(() => {
-    if (isDemoMode) {
+    if (isDemoMode && trackGeometryRef.current) {
       const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
       if (!prefersReducedMotion && scopeRef.current) {
@@ -72,67 +86,16 @@ export default function CircuitMap() {
           loop: true,
         });
       } else {
-        // Fallback to manual calculation if reduced motion or no scope
+        // Fallback to oval geometry-based calculation if reduced motion or no scope
         const interval = setInterval(() => {
           const lapProgress = (telemetry?.lap || 0) % 1;
-          // Track path based on SVG path: Metro Circuit
-          // Path: M 60 150 → Q 60 60 150 60 → L 350 60 → Q 440 60 440 150 → Q 440 220 370 240 → L 280 240 → Q 240 240 220 200 → Q 200 160 160 160 → Q 100 160 60 150
-          const angle = lapProgress * Math.PI * 2;
-          let x, y;
-          if (angle < Math.PI / 2) {
-            // Sector 1: Start (60,150) to (150,60) to (350,60)
-            const subProgress = angle / (Math.PI / 2);
-            if (subProgress < 0.3) {
-              // Curve to (150,60)
-              const t = subProgress / 0.3;
-              x = 60 + t * 90;
-              y = 150 - t * 90;
-            } else {
-              // Straight to (350,60)
-              const t = (subProgress - 0.3) / 0.7;
-              x = 150 + t * 200;
-              y = 60;
-            }
-          } else if (angle < Math.PI) {
-            // Sector 2: (350,60) to (440,150) to (370,240)
-            const subProgress = (angle - Math.PI / 2) / (Math.PI / 2);
-            if (subProgress < 0.5) {
-              // Curve to (440,150)
-              const t = subProgress / 0.5;
-              x = 350 + t * 90;
-              y = 60 + t * 90;
-            } else {
-              // Curve to (370,240)
-              const t = (subProgress - 0.5) / 0.5;
-              x = 440 - t * 70;
-              y = 150 + t * 90;
-            }
-          } else if (angle < Math.PI * 1.5) {
-            // Sector 3: (370,240) to (280,240) to (220,200) to (160,160)
-            const subProgress = (angle - Math.PI) / (Math.PI / 2);
-            if (subProgress < 0.25) {
-              // Straight to (280,240)
-              const t = subProgress / 0.25;
-              x = 370 - t * 90;
-              y = 240;
-            } else if (subProgress < 0.5) {
-              // Curve to (220,200)
-              const t = (subProgress - 0.25) / 0.25;
-              x = 280 - t * 60;
-              y = 240 - t * 40;
-            } else {
-              // Curve to (160,160)
-              const t = (subProgress - 0.5) / 0.5;
-              x = 220 - t * 60;
-              y = 200 - t * 40;
-            }
-          } else {
-            // Sector 4: (160,160) back to (60,150)
-            const subProgress = (angle - Math.PI * 1.5) / (Math.PI / 2);
-            x = 160 - subProgress * 100;
-            y = 160 - subProgress * 10;
-          }
-          setDemoPosition({ x, y, lap: Math.floor(telemetry?.lap || 0) });
+          const arcLength = lapProgress * trackGeometryRef.current.totalLength;
+          const position = trackGeometryRef.current.getPositionFromArcLength(arcLength);
+          setDemoPosition({
+            x: position.x,
+            y: position.y,
+            lap: Math.floor(telemetry?.lap || 0),
+          });
         }, 200);
         return () => clearInterval(interval);
       }
@@ -213,14 +176,14 @@ export default function CircuitMap() {
               {isSchematicMode ? 'SCHEMATIC' : 'GPS TRACE'}
             </button>
           )}
-          <span className="text-[8px] font-mono text-white/20 tracking-widest">METRO CIRCUIT · 1.24 mi / LAP</span>
+          <span className="text-[8px] font-mono text-white/20 tracking-widest">OVAL TRACK · 1.22 mi / LAP</span>
         </div>
       </header>
 
       <div className="flex-1 overflow-auto p-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Circuit SVG */}
         <div className="col-span-1 lg:col-span-2 rounded border border-white/[0.06] bg-[#101217] glass p-4">
-          <div className="text-[11px] font-display font-bold tracking-widest text-white/40 uppercase mb-4">Circuit Layout — Metro Circuit</div>
+          <div className="text-[11px] font-display font-bold tracking-widest text-white/40 uppercase mb-4">Circuit Layout — Oval Track</div>
           <div className="relative flex items-center justify-center" style={{ height: 320 }}>
             <CircuitSVG
               svgRef={svgRef}

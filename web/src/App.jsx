@@ -23,6 +23,7 @@ import AppSettings from './pages/AppSettings';
 import LiveComms from './pages/LiveComms';
 import Benchmarks from './pages/Benchmarks';
 import { RaceEngineProvider } from '@/lib/RaceEngineContext';
+import { WeatherProvider } from '@/lib/WeatherContext';
 import GlobalCommandOverlay from './components/driver/GlobalCommandOverlay';
 
 const AuthenticatedApp = () => {
@@ -77,14 +78,16 @@ function App() {
   return (
     <AuthProvider>
       <PasscodeAuthProvider>
-        <QueryClientProvider client={queryClientInstance}>
-          <Router>
-            <AuthenticatedApp />
-            {/* DriverCommandListener at absolute root level - never unmounts */}
-            <GlobalCommandOverlay />
-            <Toaster />
-          </Router>
-        </QueryClientProvider>
+        <WeatherProvider>
+          <QueryClientProvider client={queryClientInstance}>
+            <Router>
+              <AuthenticatedApp />
+              {/* DriverCommandListener at absolute root level - never unmounts */}
+              <GlobalCommandOverlay />
+              <Toaster />
+            </Router>
+          </QueryClientProvider>
+        </WeatherProvider>
       </PasscodeAuthProvider>
     </AuthProvider>
   );

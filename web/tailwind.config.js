@@ -14,6 +14,7 @@ module.exports = {
   			sans: ['var(--font-sans)'],
   			f1: ['var(--font-f1)'],
   			display: ['var(--font-display)'],
+  			accent: ['var(--font-accent)'],
   		},
   		colors: {
   			background: 'hsl(var(--background))',
