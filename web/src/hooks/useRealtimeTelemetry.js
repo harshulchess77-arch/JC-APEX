@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { io } from 'socket.io-client';
 import { supabase } from '@/lib/supabaseClient';
 
 // Standardized message structures
