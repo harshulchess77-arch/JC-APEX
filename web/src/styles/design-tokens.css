@@ -1,49 +1,130 @@
 /**
- * JC-APEX Design System - Design Tokens
- * Centralized design tokens for consistent styling across the application
+ * JC-APEX Design Tokens - Single Source of Truth
+ * F1-inspired "Pit Wall" design system
  */
 
 :root {
-  /* Spacing Scale */
-  --spacing-xs: 0.25rem;   /* 4px */
-  --spacing-sm: 0.5rem;    /* 8px */
-  --spacing-md: 0.75rem;   /* 12px */
-  --spacing-lg: 1rem;      /* 16px */
-  --spacing-xl: 1.5rem;    /* 24px */
-  --spacing-2xl: 2rem;     /* 32px */
-  --spacing-3xl: 3rem;     /* 48px */
-
+  /* ============================================================================
+     COLOR TOKENS
+     Semantic colors only - encode state, not arbitrary values
+     ============================================================================ */
+  
+  /* Primary Brand */
+  --color-crimson: #FF1E42;
+  --color-crimson-dim: rgba(255, 30, 66, 0.15);
+  --color-crimson-glow: rgba(255, 30, 66, 0.3);
+  
+  /* Backgrounds */
+  --color-carbon: #08090C;
+  --color-surface: #101217;
+  --color-surface-elevated: #151920;
+  --color-surface-hover: #1A1E26;
+  
+  /* Text */
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: rgba(255, 255, 255, 0.6);
+  --color-text-tertiary: rgba(255, 255, 255, 0.4);
+  --color-text-muted: rgba(255, 255, 255, 0.25);
+  
+  /* Status Colors */
+  --color-nominal: #10B981;
+  --color-nominal-dim: rgba(16, 185, 129, 0.15);
+  --color-signal: #00E676;
+  --color-warning: #FFB300;
+  --color-warning-dim: rgba(255, 179, 0, 0.15);
+  --color-critical: #FF1E42;
+  --color-critical-dim: rgba(255, 30, 66, 0.15);
+  --color-data: #00E5FF;
+  --color-data-dim: rgba(0, 229, 255, 0.15);
+  
+  /* Borders */
+  --color-border: rgba(255, 255, 255, 0.06);
+  --color-border-hover: rgba(255, 255, 255, 0.12);
+  --color-border-focus: rgba(255, 30, 66, 0.5);
+  
+  /* ============================================================================
+     TYPOGRAPHY TOKENS
+     ============================================================================ */
+  
+  /* Font Families */
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Orbitron', 'Rajdhani', sans-serif;
+  
   /* Font Sizes */
-  --text-xs: 0.625rem;     /* 10px */
-  --text-sm: 0.75rem;      /* 12px */
-  --text-base: 0.875rem;   /* 14px */
-  --text-lg: 1rem;         /* 16px */
-  --text-xl: 1.125rem;     /* 18px */
-  --text-2xl: 1.25rem;     /* 20px */
-  --text-3xl: 1.5rem;      /* 24px */
-
+  --text-xs: 0.625rem;    /* 10px - Small labels */
+  --text-sm: 0.75rem;     /* 12px - Captions */
+  --text-base: 0.875rem;  /* 14px - Body */
+  --text-lg: 1rem;        /* 16px - Medium headings */
+  --text-xl: 1.125rem;    /* 18px - Large headings */
+  --text-2xl: 1.25rem;   /* 20px - Section titles */
+  --text-3xl: 1.5rem;    /* 24px - Page titles */
+  --text-4xl: 2rem;      /* 32px - Display */
+  --text-5xl: 2.5rem;    /* 40px - Hero */
+  
   /* Font Weights */
   --font-light: 300;
   --font-normal: 400;
   --font-medium: 500;
   --font-semibold: 600;
   --font-bold: 700;
-  --font-black: 800;
-  --font-heavy: 900;
-
-  /* Border Radius */
-  --radius-sm: 0.25rem;     /* 4px */
-  --radius-md: 0.5rem;      /* 8px */
-  --radius-lg: 0.75rem;     /* 12px */
-  --radius-xl: 1rem;        /* 16px */
+  --font-black: 900;
+  
+  /* Line Heights */
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.75;
+  
+  /* Letter Spacing */
+  --tracking-tight: -0.025em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.025em;
+  --tracking-wider: 0.05em;
+  --tracking-widest: 0.1em;
+  
+  /* ============================================================================
+     SPACING TOKENS
+     ============================================================================ */
+  
+  --space-1: 0.25rem;   /* 4px */
+  --space-2: 0.5rem;    /* 8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-5: 1.25rem;   /* 20px */
+  --space-6: 1.5rem;    /* 24px */
+  --space-8: 2rem;      /* 32px */
+  --space-10: 2.5rem;   /* 40px */
+  --space-12: 3rem;     /* 48px */
+  --space-16: 4rem;     /* 64px */
+  --space-20: 5rem;     /* 80px */
+  --space-24: 6rem;     /* 96px */
+  
+  /* ============================================================================
+     BORDER RADIUS TOKENS
+     ============================================================================ */
+  
+  --radius-sm: 0.25rem;  /* 4px */
+  --radius-md: 0.5rem;   /* 8px */
+  --radius-lg: 0.75rem;  /* 12px */
+  --radius-xl: 1rem;     /* 16px */
+  --radius-2xl: 1.5rem;  /* 24px */
   --radius-full: 9999px;
-
-  /* Transitions */
-  --transition-fast: 150ms ease;
-  --transition-base: 200ms ease;
-  --transition-slow: 300ms ease;
-
-  /* Z-Index Scale */
+  
+  /* ============================================================================
+     SHADOW TOKENS
+     ============================================================================ */
+  
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-glow: 0 0 20px rgba(255, 30, 66, 0.3), 0 0 60px rgba(255, 30, 66, 0.1);
+  --shadow-glow-cyan: 0 0 20px rgba(0, 229, 255, 0.3);
+  
+  /* ============================================================================
+     Z-INDEX TOKENS
+     ============================================================================ */
+  
   --z-dropdown: 1000;
   --z-sticky: 1020;
   --z-fixed: 1030;
@@ -51,4 +132,59 @@
   --z-modal: 1050;
   --z-popover: 1060;
   --z-tooltip: 1070;
+  --z-toast: 1080;
+  --z-overlay: 9999;
+  
+  /* ============================================================================
+     MOTION TOKENS
+     ============================================================================ */
+  
+  /* Durations */
+  --duration-instant: 50ms;
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+  --duration-slow: 300ms;
+  --duration-slower: 500ms;
+  
+  /* Easings */
+  --ease-linear: linear;
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  
+  /* ============================================================================
+     GLASSMORPHISM TOKENS
+     Liquid Glass - ONLY on floating layers (max 6 per screen)
+     ============================================================================ */
+  
+  --glass-bg: rgba(255, 255, 255, 0.04);
+  --glass-bg-strong: rgba(255, 255, 255, 0.08);
+  --glass-bg-chip: rgba(255, 255, 255, 0.06);
+  --glass-blur: 14px;
+  --glass-blur-strong: 22px;
+  --glass-blur-chip: 12px;
+  --glass-saturate: 140%;
+  --glass-saturate-strong: 180%;
+  --glass-saturate-chip: 150%;
+  --glass-border: rgba(255, 255, 255, 0.10);
+  --glass-border-strong: rgba(255, 255, 255, 0.12);
+  --glass-border-chip: rgba(255, 255, 255, 0.08);
+  
+  /* ============================================================================
+     BREAKPOINT TOKENS
+     ============================================================================ */
+  
+  --breakpoint-mobile: 390px;
+  --breakpoint-tablet: 768px;
+  --breakpoint-desktop: 1024px;
+  --breakpoint-wide: 1440px;
+  
+  /* ============================================================================
+     TOUCH TARGET TOKENS
+     ============================================================================ */
+  
+  --touch-target: 44px;
+  --touch-target-sm: 40px;
+  --touch-target-lg: 48px;
 }

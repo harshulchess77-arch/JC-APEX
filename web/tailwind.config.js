@@ -5,79 +5,83 @@ module.exports = {
   theme: {
   	extend: {
   		borderRadius: {
-  			lg: 'var(--radius)',
-  			md: 'calc(var(--radius) - 2px)',
-  			sm: 'calc(var(--radius) - 4px)'
+  			lg: 'var(--radius-lg)',
+  			md: 'var(--radius-md)',
+  			sm: 'var(--radius-sm)',
+  			xl: 'var(--radius-xl)',
+  			'2xl': 'var(--radius-2xl)',
+  			full: 'var(--radius-full)',
   		},
   		fontFamily: {
   			mono: ['var(--font-mono)'],
   			sans: ['var(--font-sans)'],
-  			f1: ['var(--font-f1)'],
   			display: ['var(--font-display)'],
-  			accent: ['var(--font-accent)'],
   		},
   		colors: {
-  			background: 'hsl(var(--background))',
-  			foreground: 'hsl(var(--foreground))',
+  			background: 'var(--color-carbon)',
+  			foreground: 'var(--color-text-primary)',
   			card: {
-  				DEFAULT: 'hsl(var(--card))',
-  				foreground: 'hsl(var(--card-foreground))'
+  				DEFAULT: 'var(--color-surface)',
+  				foreground: 'var(--color-text-primary)'
   			},
   			popover: {
-  				DEFAULT: 'hsl(var(--popover))',
-  				foreground: 'hsl(var(--popover-foreground))'
+  				DEFAULT: 'var(--color-surface)',
+  				foreground: 'var(--color-text-primary)'
   			},
   			primary: {
-  				DEFAULT: 'hsl(var(--primary))',
-  				foreground: 'hsl(var(--primary-foreground))'
+  				DEFAULT: 'var(--color-crimson)',
+  				foreground: 'var(--color-text-primary)'
   			},
   			secondary: {
-  				DEFAULT: 'hsl(var(--secondary))',
-  				foreground: 'hsl(var(--secondary-foreground))'
+  				DEFAULT: 'var(--color-surface-elevated)',
+  				foreground: 'var(--color-text-secondary)'
   			},
   			muted: {
-  				DEFAULT: 'hsl(var(--muted))',
-  				foreground: 'hsl(var(--muted-foreground))'
+  				DEFAULT: 'var(--color-surface)',
+  				foreground: 'var(--color-text-tertiary)'
   			},
   			accent: {
-  				DEFAULT: 'hsl(var(--accent))',
-  				foreground: 'hsl(var(--accent-foreground))'
+  				DEFAULT: 'var(--color-crimson)',
+  				foreground: 'var(--color-text-primary)'
   			},
   			destructive: {
-  				DEFAULT: 'hsl(var(--destructive))',
-  				foreground: 'hsl(var(--destructive-foreground))'
+  				DEFAULT: 'var(--color-critical)',
+  				foreground: 'var(--color-text-primary)'
   			},
-  			border: 'hsl(var(--border))',
-  			input: 'hsl(var(--input))',
-  			ring: 'hsl(var(--ring))',
-  			chart: {
-  				'1': 'hsl(var(--chart-1))',
-  				'2': 'hsl(var(--chart-2))',
-  				'3': 'hsl(var(--chart-3))',
-  				'4': 'hsl(var(--chart-4))',
-  				'5': 'hsl(var(--chart-5))'
-  			},
-  			sidebar: {
-  				DEFAULT: 'hsl(var(--sidebar-background))',
-  				foreground: 'hsl(var(--sidebar-foreground))',
-  				primary: 'hsl(var(--sidebar-primary))',
-  				'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
-  				accent: 'hsl(var(--sidebar-accent))',
-  				'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
-  				border: 'hsl(var(--sidebar-border))',
-  				ring: 'hsl(var(--sidebar-ring))'
-  			},
-  			// JC-APEX F1 Theme Colors
-  			f1: {
-  				crimson: '#FF1E42',
-  				carbon: '#08090C',
-  				surface: '#101217',
-  				slate: '#8A909D',
-  				nominal: '#10B981',
-  				cyan: '#00E5FF',
-  				gold: '#FFB300',
-  				border: '#1C1F28'
-  			}
+  			border: 'var(--color-border)',
+  			input: 'var(--color-border)',
+  			ring: 'var(--color-crimson)',
+  			// Status colors from design tokens
+  			nominal: 'var(--color-nominal)',
+  			signal: 'var(--color-signal)',
+  			warning: 'var(--color-warning)',
+  			critical: 'var(--color-critical)',
+  			data: 'var(--color-data)',
+  		},
+  		spacing: {
+  			'1': 'var(--space-1)',
+  			'2': 'var(--space-2)',
+  			'3': 'var(--space-3)',
+  			'4': 'var(--space-4)',
+  			'5': 'var(--space-5)',
+  			'6': 'var(--space-6)',
+  			'8': 'var(--space-8)',
+  			'10': 'var(--space-10)',
+  			'12': 'var(--space-12)',
+  			'16': 'var(--space-16)',
+  			'20': 'var(--space-20)',
+  			'24': 'var(--space-24)',
+  		},
+  		fontSize: {
+  			xs: 'var(--text-xs)',
+  			sm: 'var(--text-sm)',
+  			base: 'var(--text-base)',
+  			lg: 'var(--text-lg)',
+  			xl: 'var(--text-xl)',
+  			'2xl': 'var(--text-2xl)',
+  			'3xl': 'var(--text-3xl)',
+  			'4xl': 'var(--text-4xl)',
+  			'5xl': 'var(--text-5xl)',
   		},
   		keyframes: {
   			'accordion-down': {

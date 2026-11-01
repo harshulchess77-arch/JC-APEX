@@ -13,13 +13,12 @@ import PitSidebar from './pit-center/PitSidebar';
 import { TABS } from './pit-center/pit-constants';
 import { MetricChip } from '../components/common';
 import AIDrivingOraclePanel from '../components/oracle/AIDrivingOraclePanel';
-import AIOraclePanel from '../components/pit/AIOraclePanel';
 
 export default function PitCenter() {
   const {
     telemetry, strategy, setStrategy,
     flag, setFlag, oracleMessages, commsMessages,
-    chartData, sendCommand: legacySendCommand, formatTime, estimatedLapsRemaining, signalLost, lastPacketTime,
+    chartData, formatTime, estimatedLapsRemaining, signalLost, lastPacketTime,
     sessionId, telemetryHistory, isDemoMode, isLive
   } = useTelemetry();
   const {
@@ -33,7 +32,6 @@ export default function PitCenter() {
   const [sessionActive, setSessionActive] = useState(false);
 
   const handleSendCommand = (commandText) => {
-    // Use realtime hook for actual dispatch
     let commandType;
     if (commandText === 'BOX THIS LAP') commandType = COMMAND_TYPES.BOX_THIS_LAP;
     else if (commandText === 'PACE DOWN') commandType = COMMAND_TYPES.PACE_DOWN;
@@ -42,8 +40,6 @@ export default function PitCenter() {
     else commandType = 'COMMAND';
 
     realtimeSendCommand(commandType, commandText);
-    // Also use legacy for UI feedback
-    legacySendCommand(commandText);
   };
 
   const handleFlagChange = (newFlag) => {
@@ -116,14 +112,12 @@ export default function PitCenter() {
           <div className="flex-1 overflow-y-auto p-3">
             {activeTab === 'overview'        && (
               <div className="space-y-3">
-                <AIOraclePanel />
                 <AIDrivingOraclePanel sessionId={sessionId} />
                 <OverviewTab telemetry={telemetry} chartData={chartData} oracleMessages={oracleMessages} />
               </div>
             )}
             {activeTab === 'ai-oracle'       && (
               <div className="space-y-3">
-                <AIOraclePanel />
                 <AIDrivingOraclePanel sessionId={sessionId} />
                 <OracleTab oracleMessages={oracleMessages} telemetry={telemetry} />
               </div>
