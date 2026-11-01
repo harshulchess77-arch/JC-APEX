@@ -64,6 +64,8 @@ class UnifiedTelemetryBridge:
 
         if self.mode == "online" and (not self.supabase_url or not self.supabase_key):
             print("[WARN] Supabase credentials missing in .env. Falling back to OFFLINE (CSV-only) mode.")
+            print(f"[DEBUG] SUPABASE_URL: {'SET' if self.supabase_url else 'MISSING'}")
+            print(f"[DEBUG] SUPABASE_KEY: {'SET' if self.supabase_key else 'MISSING'}")
             self.mode = "offline"
 
         self.live_upload_enabled = self.mode == "online"
@@ -137,6 +139,9 @@ class UnifiedTelemetryBridge:
             "Prefer": "return=minimal",
         }
 
+        print(f"[SUPABASE WORKER] Endpoint: {endpoint}")
+        print(f"[SUPABASE WORKER] Upload queue enabled: {self.live_upload_enabled}")
+
         while self.running:
             try:
                 payload = self.upload_queue.get(timeout=0.5)
@@ -146,14 +151,21 @@ class UnifiedTelemetryBridge:
             try:
                 res = self.http_session.post(endpoint, headers=headers, json=payload, timeout=1.5)
 
-                # Automatic fallback if database schema does not yet have newer columns (e.g. 'wh')
-                if res.status_code == 400 and not self.schema_fallback_active:
-                    print("[SUPABASE NOTICE] Retrying without extended columns ('wh')...")
-                    self.schema_fallback_active = True
+                if res.status_code == 200 or res.status_code == 201:
+                    if int(time.time()) % 10 == 0:  # Every 10 seconds
+                        print(f"[SUPABASE OK] Uploaded packet #{payload.get('packet_id')}")
+                elif res.status_code == 400:
+                    print(f"[SUPABASE ERR 400] Bad request: {res.text[:100]}")
+                    # Automatic fallback if database schema does not yet have newer columns (e.g. 'wh')
+                    if not self.schema_fallback_active:
+                        print("[SUPABASE NOTICE] Retrying without extended columns ('wh')...")
+                        self.schema_fallback_active = True
 
-                if self.schema_fallback_active and "wh" in payload:
-                    fallback_payload = {k: v for k, v in payload.items() if k != "wh"}
-                    self.http_session.post(endpoint, headers=headers, json=fallback_payload, timeout=1.5)
+                    if self.schema_fallback_active and "wh" in payload:
+                        fallback_payload = {k: v for k, v in payload.items() if k != "wh"}
+                        self.http_session.post(endpoint, headers=headers, json=fallback_payload, timeout=1.5)
+                else:
+                    print(f"[SUPABASE ERR {res.status_code}] {res.text[:100]}")
 
             except requests.RequestException as e:
                 print(f"[NETWORK WARN] Supabase upload timeout/error (saved in CSV): {e}")
@@ -222,25 +234,6 @@ class UnifiedTelemetryBridge:
             if not self.upload_queue.full():
                 self.upload_queue.put_nowait(payload)
 
-        # 3. Process frame through AI ORACLE (non-blocking)
-        try:
-            oracle_frame = TelemetryFrame(
-                volts=volts,
-                amps=amps,
-                watts=watts,
-                wh=wh,
-                speed_h=speed_h,
-                speed_g=speed_g,
-                latitude=lat,
-                longitude=lng,
-                timestamp=time.time()
-            )
-            recommendation = self.ai_oracle.process_frame(oracle_frame)
-            if recommendation:
-                print(f"[AI ORACLE] {recommendation.severity.value.upper()}: {recommendation.message}")
-        except Exception as e:
-            print(f"[AI ORACLE] Processing error: {e}")
-
         mode_tag = "[LIVE]" if self.live_upload_enabled else "[CSV]"
         print(
             f"[{datetime.now().strftime('%H:%M:%S')}] PKT #{packet_id:<5} | "
@@ -276,7 +269,7 @@ class UnifiedTelemetryBridge:
                     frame,
                     weather=weather,
                     sector=1,  # Would be calculated from oval track geometry
-                    current_lap=int(wh / 2.5),  # Estimate lap from Wh
+                    current_lap=int(wh / 2.5) if wh > 0 else 0,  # Estimate lap from Wh
                     total_laps=20,
                 )
 

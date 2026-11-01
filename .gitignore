@@ -2,8 +2,12 @@
 .env
 .env.local
 .env.production.local
+gateway/.env
+web/.env
 # Allow .env.example files (templates)
 !.env.example
+!gateway/.env.example
+!web/.env.example
 
 # Python
 __pycache__/
