@@ -151,7 +151,7 @@ CREATE TABLE public.race_commands (
 -- Create indexes for performance
 CREATE INDEX idx_race_commands_created_at ON public.race_commands(created_at DESC);
 CREATE INDEX idx_race_commands_sender ON public.race_commands(sender);
-CREATE idx_race_commands_category ON public.race_commands(category);
+CREATE INDEX idx_race_commands_category ON public.race_commands(category);
 
 -- Add comments
 COMMENT ON TABLE public.race_commands IS 'Persistent race command broadcast history';
