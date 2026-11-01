@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { telemetryService } from '@/services/telemetryService';
 import { logger } from '@/utils/logger';
-import { ZERO_TELEMETRY } from './telemetry-constants';
+import { ZERO_TELEMETRY } from '@/lib/constants';
 
 export function useLiveTelemetry({ enabled, sessionId, setTelemetry, setHardwareData, setChartData, setTelemetryHistory, setLastUpdate, setIsConnected, setIsLive, setActiveSessionId }) {
   useEffect(() => {

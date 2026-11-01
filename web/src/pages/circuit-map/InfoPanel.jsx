@@ -1,5 +1,5 @@
 import React from 'react';
-import { SECTORS, PIT_INFO, SEGMENTS } from './circuit-constants';
+import { CIRCUIT_SECTORS, CIRCUIT_PIT_INFO, CIRCUIT_SEGMENTS } from '@/lib/constants';
 
 export default function InfoPanel({ activeSegment, setActiveSegment }) {
   return (
@@ -7,7 +7,7 @@ export default function InfoPanel({ activeSegment, setActiveSegment }) {
       {/* Sector times */}
       <div className="rounded border border-white/[0.06] bg-[#101217] glass p-3">
         <div className="text-[11px] font-display font-bold tracking-widest text-white/40 uppercase mb-3">Sector Times (SAMPLE DATA)</div>
-        {SECTORS.map(s => (
+        {CIRCUIT_SECTORS.map(s => (
           <div key={s.id} className="flex items-center gap-3 mb-2 p-2 rounded bg-white/[0.02]">
             <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
             <div className="flex-1">

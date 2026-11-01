@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { usePasscodeAuth } from '@/lib/PasscodeAuthContext';
-import { ZERO_TELEMETRY } from './telemetry/telemetry-constants';
+import { ZERO_TELEMETRY } from '@/lib/constants';
 import { useDemoTelemetry } from './telemetry/telemetry-demo';
 import { useLiveTelemetry } from './telemetry/telemetry-live';
 import { useTelemetryWatchdog } from './telemetry/telemetry-watchdog';

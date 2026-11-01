@@ -31,6 +31,14 @@ import serial.tools.list_ports
 import requests
 from dotenv import load_dotenv
 
+# Import AI ORACLE module
+try:
+    from ai_oracle import AIOracle, TelemetryFrame, WeatherState
+    AI_ORACLE_AVAILABLE = True
+except ImportError:
+    AI_ORACLE_AVAILABLE = False
+    print("[AI ORACLE] Module not available - running without AI recommendations")
+
 load_dotenv()
 
 
@@ -73,6 +81,12 @@ class UnifiedTelemetryBridge:
         if self.live_upload_enabled:
             self.worker_thread = threading.Thread(target=self._supabase_worker, daemon=True)
             self.worker_thread.start()
+
+        # AI ORACLE integration
+        self.ai_oracle = None
+        if AI_ORACLE_AVAILABLE:
+            self.ai_oracle = AIOracle(race_duration_hours=1.0)
+            print("[AI ORACLE] Initialized - tactical recommendations enabled")
 
     def _init_csv_backup(self):
         with open(self.csv_backup, "w", encoding="utf-8") as f:
@@ -208,6 +222,25 @@ class UnifiedTelemetryBridge:
             if not self.upload_queue.full():
                 self.upload_queue.put_nowait(payload)
 
+        # 3. Process frame through AI ORACLE (non-blocking)
+        try:
+            oracle_frame = TelemetryFrame(
+                volts=volts,
+                amps=amps,
+                watts=watts,
+                wh=wh,
+                speed_h=speed_h,
+                speed_g=speed_g,
+                latitude=lat,
+                longitude=lng,
+                timestamp=time.time()
+            )
+            recommendation = self.ai_oracle.process_frame(oracle_frame)
+            if recommendation:
+                print(f"[AI ORACLE] {recommendation.severity.value.upper()}: {recommendation.message}")
+        except Exception as e:
+            print(f"[AI ORACLE] Processing error: {e}")
+
         mode_tag = "[LIVE]" if self.live_upload_enabled else "[CSV]"
         print(
             f"[{datetime.now().strftime('%H:%M:%S')}] PKT #{packet_id:<5} | "
@@ -215,6 +248,46 @@ class UnifiedTelemetryBridge:
             f"SpdH: {speed_h:>4.1f}mph | GPS: {speed_g:>4.1f}mph | "
             f"Sats: {sats:>2} | RSSI: {rssi:>4}dBm -> {mode_tag}"
         )
+
+        # 3. Process through AI ORACLE if available
+        if self.ai_oracle and self.live_upload_enabled:
+            try:
+                frame = TelemetryFrame(
+                    timestamp=time.time(),
+                    packet_id=packet_id,
+                    volts=volts,
+                    amps=amps,
+                    watts=watts,
+                    wh=wh,
+                    speed_h=speed_h,
+                    speed_g=speed_g,
+                    lat=lat,
+                    lng=lng,
+                    sats=sats,
+                    rssi=rssi,
+                    snr=snr,
+                )
+
+                # Create default weather state (would be populated from real weather API in production)
+                weather = WeatherState()  # Uses safe defaults
+
+                # Process and get recommendations
+                recommendations = self.ai_oracle.process_telemetry(
+                    frame,
+                    weather=weather,
+                    sector=1,  # Would be calculated from oval track geometry
+                    current_lap=int(wh / 2.5),  # Estimate lap from Wh
+                    total_laps=20,
+                )
+
+                # Log and broadcast recommendations
+                for rec in recommendations:
+                    print(f"[AI ORACLE][{rec.category}][{rec.priority}] {rec.message}")
+                    self.ai_oracle.log_recommendation_to_supabase(rec)
+                    self.ai_oracle.broadcast_recommendation(rec)
+
+            except Exception as e:
+                print(f"[AI ORACLE] Processing error: {e}")
 
     def run(self):
         retry_delay = 3

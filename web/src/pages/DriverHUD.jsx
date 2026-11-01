@@ -9,6 +9,7 @@ import DriverTopBar from '../components/driver/DriverTopBar';
 import DriverLeftPanel from '../components/driver/DriverLeftPanel';
 import SpeedometerPanel from '../components/driver/SpeedometerPanel';
 import DriverRightPanel from '../components/driver/DriverRightPanel';
+import AIRecommendationOverlay from '../components/driver/AIRecommendationOverlay';
 import { CheckCircle2 } from 'lucide-react';
 
 export default function DriverHUD() {
@@ -187,6 +188,9 @@ export default function DriverHUD() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* AI ORACLE Recommendation Overlay */}
+      <AIRecommendationOverlay />
 
       {/* Focus mode toggle button */}
       <button

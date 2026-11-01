@@ -29,13 +29,14 @@ This document summarizes all security fixes applied to JC-APEX based on the comp
 ---
 
 ### ✅ 2. Row Level Security Fix
-**File:** `database/JC-APEX_DATABASE.sql`  
+**File:** `database/master.sql` (consolidated schema)  
 **Severity:** Critical → Resolved  
 **Changes:**
 - Replaced "allow-all" policies with proper access control
 - Telemetry logs: INSERT for anon/authenticated, SELECT for all
 - Commands: INSERT for service role only, SELECT for all
 - Race flags: UPDATE for service role only, SELECT for all
+- AI recommendations: Full CRUD for authenticated users
 
 **Impact:** Database now has proper access control
 
@@ -178,7 +179,7 @@ This document summarizes all security fixes applied to JC-APEX based on the comp
 ```bash
 # Option 1: Supabase Dashboard
 # 1. Go to Supabase Dashboard → SQL Editor
-# 2. Copy contents of database/JC-APEX_DATABASE.sql
+# 2. Copy contents of database/master.sql
 # 3. Run the script
 
 # Option 2: Supabase CLI (if installed)
@@ -333,7 +334,7 @@ Before going live, verify:
 - `web/package.json` - Added dompurify, updated dependencies
 
 ### Database
-- `database/JC-APEX_DATABASE.sql` - Fixed RLS policies
+- `database/master.sql` - Consolidated schema with RLS policies and AI ORACLE table
 - `gateway/.env.example` - Enhanced security warnings
 
 ### Firmware

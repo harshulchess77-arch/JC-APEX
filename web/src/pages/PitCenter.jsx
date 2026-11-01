@@ -12,6 +12,8 @@ import PitHeader from './pit-center/PitHeader';
 import PitSidebar from './pit-center/PitSidebar';
 import { TABS } from './pit-center/pit-constants';
 import { MetricChip } from '../components/common';
+import AIDrivingOraclePanel from '../components/oracle/AIDrivingOraclePanel';
+import AIOraclePanel from '../components/pit/AIOraclePanel';
 
 export default function PitCenter() {
   const {
@@ -112,8 +114,20 @@ export default function PitCenter() {
 
           {/* Tab content */}
           <div className="flex-1 overflow-y-auto p-3">
-            {activeTab === 'overview'        && <OverviewTab telemetry={telemetry} chartData={chartData} oracleMessages={oracleMessages} />}
-            {activeTab === 'ai-oracle'       && <OracleTab oracleMessages={oracleMessages} telemetry={telemetry} />}
+            {activeTab === 'overview'        && (
+              <div className="space-y-3">
+                <AIOraclePanel />
+                <AIDrivingOraclePanel sessionId={sessionId} />
+                <OverviewTab telemetry={telemetry} chartData={chartData} oracleMessages={oracleMessages} />
+              </div>
+            )}
+            {activeTab === 'ai-oracle'       && (
+              <div className="space-y-3">
+                <AIOraclePanel />
+                <AIDrivingOraclePanel sessionId={sessionId} />
+                <OracleTab oracleMessages={oracleMessages} telemetry={telemetry} />
+              </div>
+            )}
             {activeTab === 'strategy'        && <StrategyBoard />}
             {activeTab === 'race-ops'        && <RaceOpsTab flag={flag} onFlagChange={handleFlagChange} commsMessages={commsMessages} onSendCommand={handleSendCommand} />}
             {activeTab === 'circuit-map'     && <CircuitMapTab />}

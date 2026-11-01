@@ -1,26 +1,31 @@
 -- ============================================================================
 -- JC-APEX MASTER DATABASE SCHEMA
--- Version: 2.1 | Date: 2026-10-07
+-- Version: 3.0 | Date: 2026-10-29
 -- Purpose: Production-ready unified schema for Electrothon 48V telemetry system
+--           with AI ORACLE intelligence engine integration
 -- ============================================================================
--- This master file consolidates all database migrations, schemas, and policies
--- into a single production-ready SQL script.
+-- This master file consolidates all database migrations, schemas, policies,
+-- indexes, and seed data into a single production-ready SQL script.
 --
 -- Tables:
 --   - telemetry_logs: Real-time hardware telemetry (volts, amps, watts, speed, GPS)
 --   - commands: Pit-to-driver command history
 --   - race_flags: Race control flag state
+--   - ai_recommendations: AI ORACLE tactical recommendations
 --
 -- Features:
 --   - Row Level Security (RLS) with permissive policies for race operations
 --   - Supabase Realtime publication enabled on all tables
 --   - Optimized indexes for time-series queries
 --   - Session metrics calculation function
+--   - AI ORACLE recommendation tracking with confidence scoring
 -- ============================================================================
 
 -- ============================================================================
 -- STEP 1: DROP EXISTING TABLES (clean slate for production deployment)
 -- ============================================================================
+DROP TABLE IF EXISTS public.ai_recommendations CASCADE;
+DROP TABLE IF EXISTS public.oracle_recommendations CASCADE;
 DROP TABLE IF EXISTS public.telemetry_logs CASCADE;
 DROP TABLE IF EXISTS public.commands CASCADE;
 DROP TABLE IF EXISTS public.race_flags CASCADE;
@@ -35,10 +40,12 @@ CREATE TABLE public.telemetry_logs (
     volts NUMERIC(5,2) DEFAULT 0.00,
     amps NUMERIC(5,2) DEFAULT 0.00,
     watts NUMERIC(6,2) DEFAULT 0.00,
+    wh DOUBLE PRECISION DEFAULT 0.0,
     speed_h NUMERIC(4,1) DEFAULT 0.0,
     speed_g NUMERIC(4,1) DEFAULT 0.0,
     latitude NUMERIC(10,6) DEFAULT 0.000000,
     longitude NUMERIC(10,6) DEFAULT 0.000000,
+    sats INT DEFAULT 0,
     rssi INT DEFAULT 0,
     snr NUMERIC(4,1) DEFAULT 0.0
 );
@@ -48,43 +55,9 @@ CREATE INDEX idx_telemetry_logs_session_id ON public.telemetry_logs(session_id);
 CREATE INDEX idx_telemetry_logs_created_at ON public.telemetry_logs(created_at DESC);
 CREATE INDEX idx_telemetry_logs_session_time ON public.telemetry_logs(session_id, created_at DESC);
 
--- ============================================================================
--- MIGRATION: Add GPS columns if they don't exist (for existing databases)
--- ============================================================================
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_name = 'telemetry_logs'
-        AND column_name = 'latitude'
-    ) THEN
-        ALTER TABLE public.telemetry_logs ADD COLUMN latitude NUMERIC(10,6) DEFAULT 0.000000;
-    END IF;
-
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_name = 'telemetry_logs'
-        AND column_name = 'longitude'
-    ) THEN
-        ALTER TABLE public.telemetry_logs ADD COLUMN longitude NUMERIC(10,6) DEFAULT 0.000000;
-    END IF;
-
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_name = 'telemetry_logs'
-        AND column_name = 'sats'
-    ) THEN
-        ALTER TABLE public.telemetry_logs ADD COLUMN sats INT DEFAULT 0;
-    END IF;
-
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_name = 'telemetry_logs'
-        AND column_name = 'wh'
-    ) THEN
-        ALTER TABLE public.telemetry_logs ADD COLUMN wh DOUBLE PRECISION DEFAULT 0.0;
-    END IF;
-END $$;
+-- Comment on table
+COMMENT ON TABLE public.telemetry_logs IS 'Real-time hardware telemetry from Heltec V3 ESP32-S3 receiver';
+COMMENT ON COLUMN public.telemetry_logs.wh IS 'Cumulative watt-hours consumed';
 
 -- ============================================================================
 -- STEP 3: CREATE COMMANDS TABLE (pit-to-driver command history)
@@ -103,6 +76,9 @@ CREATE INDEX idx_commands_session_id ON public.commands(session_id);
 CREATE INDEX idx_commands_status ON public.commands(status);
 CREATE INDEX idx_commands_created_at ON public.commands(created_at DESC);
 
+-- Comment on table
+COMMENT ON TABLE public.commands IS 'Pit-to-driver command history with acknowledgment tracking';
+
 -- ============================================================================
 -- STEP 4: CREATE RACE_FLAGS TABLE (race control flag state)
 -- ============================================================================
@@ -115,16 +91,57 @@ CREATE TABLE public.race_flags (
 -- Initialize race flags
 INSERT INTO public.race_flags (id, active_flag) VALUES (1, 'GREEN') ON CONFLICT (id) DO NOTHING;
 
+-- Comment on table
+COMMENT ON TABLE public.race_flags IS 'Race control flag state (GREEN, YELLOW, RED, BLUE, etc.)';
+
 -- ============================================================================
--- STEP 5: ENABLE ROW LEVEL SECURITY (RLS)
+-- STEP 5: CREATE AI_RECOMMENDATIONS TABLE (AI ORACLE recommendations)
+-- ============================================================================
+CREATE TABLE public.ai_recommendations (
+  id TEXT PRIMARY KEY,
+  category TEXT NOT NULL CHECK (category IN ('ENERGY', 'STRATEGY', 'SAFETY', 'WEATHER')),
+  priority TEXT NOT NULL CHECK (priority IN ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL')),
+  message TEXT NOT NULL,
+  actionable BOOLEAN NOT NULL DEFAULT true,
+  target_value NUMERIC,
+  confidence NUMERIC NOT NULL DEFAULT 0.0 CHECK (confidence >= 0 AND confidence <= 1),
+  context JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  acknowledged_at TIMESTAMPTZ,
+  dismissed_at TIMESTAMPTZ
+);
+
+-- Create indexes for performance
+CREATE INDEX idx_ai_recommendations_created_at ON public.ai_recommendations(created_at DESC);
+CREATE INDEX idx_ai_recommendations_priority ON public.ai_recommendations(priority);
+CREATE INDEX idx_ai_recommendations_category ON public.ai_recommendations(category);
+
+-- Add comments
+COMMENT ON TABLE public.ai_recommendations IS 'AI ORACLE tactical recommendations for race strategy';
+COMMENT ON COLUMN public.ai_recommendations.id IS 'Unique recommendation identifier';
+COMMENT ON COLUMN public.ai_recommendations.category IS 'Recommendation category: ENERGY, STRATEGY, SAFETY, WEATHER';
+COMMENT ON COLUMN public.ai_recommendations.priority IS 'Recommendation priority: LOW, MEDIUM, HIGH, CRITICAL';
+COMMENT ON COLUMN public.ai_recommendations.message IS 'Human-readable recommendation message';
+COMMENT ON COLUMN public.ai_recommendations.actionable IS 'Whether the recommendation requires driver action';
+COMMENT ON COLUMN public.ai_recommendations.target_value IS 'Numerical target value for the recommendation';
+COMMENT ON COLUMN public.ai_recommendations.confidence IS 'AI confidence score (0.0 to 1.0)';
+COMMENT ON COLUMN public.ai_recommendations.context IS 'Additional context data as JSONB';
+COMMENT ON COLUMN public.ai_recommendations.created_at IS 'Timestamp when recommendation was generated';
+COMMENT ON COLUMN public.ai_recommendations.acknowledged_at IS 'Timestamp when driver acknowledged the recommendation';
+COMMENT ON COLUMN public.ai_recommendations.dismissed_at IS 'Timestamp when recommendation was dismissed';
+
+-- ============================================================================
+-- STEP 6: ENABLE ROW LEVEL SECURITY (RLS)
 -- ============================================================================
 ALTER TABLE public.telemetry_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.commands ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.race_flags ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_recommendations ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================================
--- STEP 6: CREATE SECURE RLS POLICIES (proper access control)
+-- STEP 7: CREATE SECURE RLS POLICIES (proper access control)
 -- ============================================================================
+
 -- telemetry_logs: INSERT for authenticated writes, SELECT for all reads
 DROP POLICY IF EXISTS "telemetry_logs_allow_all" ON public.telemetry_logs;
 DROP POLICY IF EXISTS "telemetry_logs_allow_insert" ON public.telemetry_logs;
@@ -170,8 +187,35 @@ CREATE POLICY "race_flags_allow_select" ON public.race_flags
     TO anon, authenticated
     USING (true);
 
+-- ai_recommendations: Full CRUD for authenticated users
+DROP POLICY IF EXISTS "ai_recommendations_allow_all" ON public.ai_recommendations;
+DROP POLICY IF EXISTS "ai_recommendations_allow_insert" ON public.ai_recommendations;
+DROP POLICY IF EXISTS "ai_recommendations_allow_select" ON public.ai_recommendations;
+DROP POLICY IF EXISTS "ai_recommendations_allow_update" ON public.ai_recommendations;
+DROP POLICY IF EXISTS "ai_recommendations_allow_delete" ON public.ai_recommendations;
+
+CREATE POLICY "Authenticated users can view ai_recommendations"
+  ON public.ai_recommendations FOR SELECT
+  TO authenticated
+  USING (true);
+
+CREATE POLICY "Authenticated users can insert ai_recommendations"
+  ON public.ai_recommendations FOR INSERT
+  TO authenticated
+  WITH CHECK (true);
+
+CREATE POLICY "Authenticated users can update ai_recommendations"
+  ON public.ai_recommendations FOR UPDATE
+  TO authenticated
+  USING (true);
+
+CREATE POLICY "Authenticated users can delete ai_recommendations"
+  ON public.ai_recommendations FOR DELETE
+  TO authenticated
+  USING (true);
+
 -- ============================================================================
--- STEP 7: ENABLE REALTIME PUBLICATION
+-- STEP 8: ENABLE REALTIME PUBLICATION
 -- ============================================================================
 -- Add tables to supabase_realtime publication
 DO $$
@@ -205,15 +249,25 @@ BEGIN
     ) THEN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.race_flags;
     END IF;
+
+    -- Add ai_recommendations
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables
+        WHERE pubname = 'supabase_realtime'
+        AND schemaname = 'public'
+        AND tablename = 'ai_recommendations'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.ai_recommendations;
+    END IF;
 END $$;
 
 -- ============================================================================
--- STEP 8: VERIFY PUBLICATION
+-- STEP 9: VERIFY PUBLICATION
 -- ============================================================================
 SELECT * FROM pg_publication_tables WHERE pubname = 'supabase_realtime';
 
 -- ============================================================================
--- STEP 9: CREATE HELPER FUNCTION FOR SESSION METRICS
+-- STEP 10: CREATE HELPER FUNCTION FOR SESSION METRICS
 -- ============================================================================
 CREATE OR REPLACE FUNCTION calculate_session_metrics(session_id_param TEXT)
 RETURNS TABLE (
@@ -244,11 +298,17 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================================================================
+-- STEP 11: SEED DATA (Initial race flags and configuration)
+-- ============================================================================
+-- Race flags are already seeded in STEP 4
+
+-- ============================================================================
 -- MIGRATION COMPLETE
 -- ============================================================================
 -- Verify schema:
 -- \d public.telemetry_logs
 -- \d public.commands
 -- \d public.race_flags
+-- \d public.ai_recommendations
 -- SELECT * FROM pg_publication_tables WHERE pubname = 'supabase_realtime';
 -- ============================================================================
