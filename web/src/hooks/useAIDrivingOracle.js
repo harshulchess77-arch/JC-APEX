@@ -1,74 +1,272 @@
-import { useState, useCallback, useEffect } from 'react';
-import { supabase } from '@/lib/supabaseClient';
-
 /**
- * AI Driving Oracle Hook
- * Fetches AI recommendations from Supabase oracle_recommendations table
- * Provides real-time updates via Supabase Realtime
+ * ============================================================================
+ * JC-APEX AI DRIVING ORACLE REACTIVE HOOK
+ * ============================================================================
+ * Client-side AI ORACLE integration for real-time race strategy:
+ * - Real-Time Energy Pacing
+ * - Weather-Adaptive Strategy
+ * - Oval Track Sector Analysis
+ * 
+ * COLOR CODING:
+ * - Cyan (#00FFFF): Advisory pacing recommendations
+ * - Amber (#FFB300): Strategic shifts
+ * - Red (#FF0033): Critical safety/energy interventions
+ * ============================================================================
  */
 
-export const ORACLE_SEVERITY = {
-  LOW: 'LOW',
-  MEDIUM: 'MEDIUM',
-  HIGH: 'HIGH',
-  CRITICAL: 'CRITICAL',
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { supabase } from '@/lib/supabaseClient';
+
+const ORACLE_SEVERITY = {
+  NOMINAL: 'nominal',
+  ADVISORY: 'advisory',
+  STRATEGIC: 'strategic',
+  CRITICAL: 'critical'
 };
 
-export function useAIDrivingOracle(sessionId = null) {
+const ORACLE_COLORS = {
+  [ORACLE_SEVERITY.NOMINAL]: {
+    bg: 'bg-[#00FFFF]/10',
+    border: 'border-[#00FFFF]',
+    text: 'text-[#00FFFF]',
+    badge: 'bg-[#00FFFF] text-black'
+  },
+  [ORACLE_SEVERITY.ADVISORY]: {
+    bg: 'bg-[#00FFFF]/20',
+    border: 'border-[#00FFFF]',
+    text: 'text-[#00FFFF]',
+    badge: 'bg-[#00FFFF] text-black'
+  },
+  [ORACLE_SEVERITY.STRATEGIC]: {
+    bg: 'bg-[#FFB300]/20',
+    border: 'border-[#FFB300]',
+    text: 'text-[#FFB300]',
+    badge: 'bg-[#FFB300] text-black'
+  },
+  [ORACLE_SEVERITY.CRITICAL]: {
+    bg: 'bg-[#FF0033]/20',
+    border: 'border-[#FF0033]',
+    text: 'text-[#FF0033]',
+    badge: 'bg-[#FF0033] text-white'
+  }
+};
+
+/**
+ * AI ORACLE Hook for client-side real-time strategy
+ */
+export function useAIDrivingOracle(sessionId = 'race-session-48v', enabled = true) {
   const [recommendations, setRecommendations] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [latestRecommendation, setLatestRecommendation] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [isTableAvailable, setIsTableAvailable] = useState(true);
+  const [weatherContext, setWeatherContext] = useState({
+    ambient_temp: 25.0,
+    track_temp: 30.0,
+    rainfall_prob: 0.0,
+    wind_speed: 0.0,
+    wind_direction: 0.0,
+    grip_coefficient: 1.0
+  });
+  
+  const channelRef = useRef(null);
+  const historyMaxLen = 50;
 
-  const fetchRecommendations = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const { data, error: fetchError } = await supabase
-        .from('oracle_recommendations')
-        .select('*')
-        .eq('session_id', sessionId || 'default')
-        .order('created_at', { ascending: false })
-        .limit(10);
-      
-      if (fetchError) throw fetchError;
-      setRecommendations(data || []);
-    } catch (err) {
-      setError(err.message);
-      setRecommendations([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [sessionId]);
-
+  // Fetch historical recommendations on mount
   useEffect(() => {
-    fetchRecommendations();
+    if (!enabled || !supabase) return;
 
-    // Subscribe to real-time updates
-    const channel = supabase
-      .channel('ai_oracle_recommendations')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'oracle_recommendations',
-        filter: sessionId ? `session_id=eq.${sessionId}` : undefined,
-      }, (payload) => {
-        setRecommendations(prev => [payload.new, ...prev].slice(0, 10));
+    const fetchRecommendations = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('oracle_recommendations')
+          .select('*')
+          .eq('session_id', sessionId)
+          .order('created_at', { ascending: false })
+          .limit(historyMaxLen);
+
+        // Check for schema cache error or missing table
+        if (error) {
+          if (error.code === 'PGRST205' || 
+              error.message?.includes('schema cache') || 
+              error.message?.includes('Could not find the table') ||
+              error.code === '42P01') {
+            console.warn('[AI ORACLE] oracle_recommendations table not available in schema cache. Falling back to local calculations.');
+            setIsTableAvailable(false);
+            return;
+          }
+          console.debug('[AI ORACLE] Fetch error:', error.message);
+          return;
+        }
+
+        if (data) {
+          setRecommendations(data);
+          if (data.length > 0) {
+            setLatestRecommendation(data[0]);
+          }
+        }
+      } catch (err) {
+        console.debug('[AI ORACLE] Fetch exception:', err);
+      }
+    };
+
+    fetchRecommendations();
+  }, [sessionId, enabled]);
+
+  // Subscribe to Realtime broadcast for live recommendations
+  useEffect(() => {
+    if (!enabled || !supabase || !isTableAvailable) return;
+
+    const channelName = `ai_oracle_broadcast_${sessionId}_${Date.now()}`;
+    const channel = supabase.channel(channelName, {
+      config: {
+        broadcast: { self: true, ack: true },
+      },
+    });
+
+    channel
+      .on('broadcast', { event: 'oracle_recommendation' }, (payload) => {
+        const rec = payload?.payload || payload?.data || payload;
+        if (rec) {
+          setLatestRecommendation(rec);
+          setRecommendations(prev => {
+            const updated = [rec, ...prev].slice(0, historyMaxLen);
+            return updated;
+          });
+        }
       })
       .subscribe((status) => {
-        setIsConnected(status === 'SUBSCRIBED');
+        if (status === 'SUBSCRIBED') {
+          setIsConnected(true);
+          console.log('[AI ORACLE] Realtime connected');
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          setIsConnected(false);
+          console.log('[AI ORACLE] Realtime disconnected');
+        }
       });
 
+    channelRef.current = channel;
+
     return () => {
-      supabase.removeChannel(channel);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
-  }, [sessionId, fetchRecommendations]);
+  }, [sessionId, enabled, isTableAvailable]);
+
+  // Update weather context
+  const updateWeather = useCallback((weather) => {
+    setWeatherContext(prev => ({ ...prev, ...weather }));
+  }, []);
+
+  // Get color scheme for severity
+  const getSeverityColors = useCallback((severity) => {
+    return ORACLE_COLORS[severity] || ORACLE_COLORS[ORACLE_SEVERITY.NOMINAL];
+  }, []);
+
+  // Clear recommendations
+  const clearRecommendations = useCallback(() => {
+    setRecommendations([]);
+    setLatestRecommendation(null);
+  }, []);
 
   return {
     recommendations,
-    isLoading,
-    error,
+    latestRecommendation,
     isConnected,
-    fetchRecommendations,
+    weatherContext,
+    updateWeather,
+    getSeverityColors,
+    clearRecommendationss: clearRecommendations,
+    ORACLE_SEVERITY
   };
 }
+
+/**
+ * Client-side Energy Pacing Calculator (fallback if server-side ORACLE unavailable)
+ */
+export function useClientSideEnergyPacing(telemetry, batteryCapacityWh = 3000.0) {
+  const [energyForecast, setEnergyForecast] = useState({
+    currentEnergyPct: 0,
+    depletionRate: 0,
+    remainingTimeMin: 0,
+    targetPower: 0,
+    recommendation: null
+  });
+
+  useEffect(() => {
+    if (!telemetry) return;
+
+    const volts = telemetry.volts || 48.0;
+    const amps = telemetry.amps || 20.0;
+    const watts = telemetry.watts || (volts * amps);
+    const wh = telemetry.wh || 0;
+    const speed = telemetry.speed || 0;
+
+    // Calculate energy percentage
+    const energyPct = (wh / batteryCapacityWh) * 100;
+
+    // Calculate depletion rate (Wh/s)
+    const depletionRate = watts / 3600.0;
+
+    // Calculate remaining time
+    const remainingEnergy = Math.max(0, batteryCapacityWh - wh);
+    const remainingTimeSec = depletionRate > 0.1 ? remainingEnergy / depletionRate : Infinity;
+    const remainingTimeMin = remainingTimeSec / 60.0;
+
+    // Calculate target power
+    let targetPower = 500.0;
+    if (remainingTimeMin > 60) {
+      targetPower = 1000.0;
+    } else if (remainingTimeMin > 45) {
+      targetPower = 800.0;
+    } else if (remainingTimeMin > 30) {
+      targetPower = 600.0;
+    } else if (remainingTimeMin > 15) {
+      targetPower = 400.0;
+    } else {
+      targetPower = 300.0;
+    }
+
+    // Generate recommendation
+    let recommendation = null;
+    if (energyPct > 90) {
+      recommendation = null;
+    } else if (energyPct > 75) {
+      recommendation = {
+        message: 'ENERGY NOMINAL - MODERATE THROTTLE',
+        severity: ORACLE_SEVERITY.ADVISORY
+      };
+    } else if (energyPct > 50) {
+      const powerDelta = watts - targetPower;
+      if (powerDelta > 100) {
+        recommendation = {
+          message: `SAVE ENERGY -${Math.round(powerDelta)}W TARGET`,
+          severity: ORACLE_SEVERITY.STRATEGIC
+        };
+      }
+    } else if (energyPct > 25) {
+      recommendation = {
+        message: 'BOX THIS LAP - ENERGY CRITICAL',
+        severity: ORACLE_SEVERITY.CRITICAL
+      };
+    } else {
+      recommendation = {
+        message: 'EMERGENCY - BATTERY DEPLETED',
+        severity: ORACLE_SEVERITY.CRITICAL
+      };
+    }
+
+    setEnergyForecast({
+      currentEnergyPct: energyPct,
+      depletionRate,
+      remainingTimeMin: Math.min(remainingTimeMin, 999),
+      targetPower,
+      recommendation
+    });
+  }, [telemetry, batteryCapacityWh]);
+
+  return energyForecast;
+}
+
+export { ORACLE_SEVERITY, ORACLE_COLORS };

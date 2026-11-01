@@ -10,15 +10,24 @@ import PasscodeProtectedRoute from '@/components/PasscodeProtectedRoute';
 import { PasscodeAuthProvider } from '@/lib/PasscodeAuthContext';
 import Landing from './pages/landings';
 import RoleSelect from './pages/RoleSelect';
+import CommandCenter from './pages/CommandCenter';
 import PitCenter from './pages/PitCenter';
 import DriverHUD from './pages/DriverHUD';
+import RaceDirector from './pages/RaceDirector';
+import DriverProfile from './pages/DriverProfile';
+import StrategyLibrary from './pages/StrategyLibrary';
+import ChampionshipStandings from './pages/ChampionshipStandings';
+import TelemetryDashboard from './pages/TelemetryDashbaord';
+import CircuitMap from './pages/CircuitMap';
+import AppSettings from './pages/AppSettings';
+import LiveComms from './pages/LiveComms';
+import Benchmarks from './pages/Benchmarks';
 import { RaceEngineProvider } from '@/lib/RaceEngineContext';
 import { WeatherProvider } from '@/lib/WeatherContext';
 import GlobalCommandOverlay from './components/driver/GlobalCommandOverlay';
-import { OfflineBanner, DemoModeBanner } from './components/common/GlobalBanners';
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, isDemoMode } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings } = useAuth();
 
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
@@ -32,12 +41,12 @@ const AuthenticatedApp = () => {
 
   return (
     <RaceEngineProvider>
-      <OfflineBanner />
-      <DemoModeBanner isDemoMode={isDemoMode} />
       <Routes>
         {/* ── PUBLIC ROUTES (no auth required) ── */}
+        {/* Root renders the high-level public Landing / Home page */}
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<RoleSelect />} />
+        <Route path="/command-center" element={<Navigate to="/pit" replace />} />
 
         {/* ── ERROR PAGES ── */}
         <Route path="/404" element={<NotFound />} />
@@ -48,7 +57,16 @@ const AuthenticatedApp = () => {
         <Route element={<PasscodeProtectedRoute />}>
           <Route path="/pit"                    element={<PitCenter />} />
           <Route path="/driver"                 element={<DriverHUD />} />
-          <Route path="*"                       element={<Navigate to="/pit" replace />} />
+          <Route path="/director"               element={<RaceDirector />} />
+          <Route path="/drivers"                element={<DriverProfile />} />
+          <Route path="/strategy-library"       element={<StrategyLibrary />} />
+          <Route path="/championship-standings" element={<ChampionshipStandings />} />
+          <Route path="/telemetry-dashboard"    element={<TelemetryDashboard />} />
+          <Route path="/circuit-map"            element={<CircuitMap />} />
+          <Route path="/settings"               element={<AppSettings />} />
+          <Route path="/live-comms"             element={<LiveComms />} />
+          <Route path="/benchmarks"             element={<Benchmarks />} />
+          <Route path="*"                       element={<NotFound />} />
         </Route>
       </Routes>
     </RaceEngineProvider>

@@ -51,28 +51,35 @@ export function useRealtimeTelemetry(role = 'driver') {
   const [driverStrategyMode, setDriverStrategyMode] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   
-  const socketRef = useRef(null);
   const channelRef = useRef(null);
   const commandTimeoutRef = useRef(null);
 
   // Initialize connection - Use Supabase directly (skip WebSocket for demo)
   useEffect(() => {
-    // Skip WebSocket and go directly to Supabase for production/demo
     trySupabaseConnection();
 
     return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-      }
+      // Proper cleanup: remove channel from Supabase client registry
       if (channelRef.current) {
-        channelRef.current.unsubscribe();
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
       }
     };
   }, [role]);
 
   const trySupabaseConnection = async () => {
     try {
-      // Query active flag from database on mount
+      // Step 1: Remove any stale race_commands channels from previous mounts
+      const existingChannels = supabase.getChannels();
+      const staleRaceCommandsChannels = existingChannels.filter(ch => 
+        ch.topic === 'realtime:race_commands'
+      );
+      
+      for (const staleChannel of staleRaceCommandsChannels) {
+        await supabase.removeChannel(staleChannel);
+      }
+
+      // Step 2: Query active flag from database on mount
       if (supabase?.from) {
         supabase.from('race_flags').select('active_flag').eq('id', 1).single().then(({ data }) => {
           if (data?.active_flag) {
@@ -81,15 +88,18 @@ export function useRealtimeTelemetry(role = 'driver') {
         }).catch(() => {});
       }
 
-      const channel = supabase.channel('race_commands', {
+      // Step 3: Create channel with unique name per role to avoid conflicts
+      const channelName = `race_commands_${role}_${Date.now()}`;
+      const channel = supabase.channel(channelName, {
         config: {
           broadcast: { self: true, ack: true },
           presence: { key: role },
         },
       });
 
-      // Subscribe to broadcast events
+      // Step 4: Chain ALL listeners BEFORE subscribe (fixes "cannot add postgres_changes after subscribe" error)
       channel
+        // Broadcast events
         .on('broadcast', { event: 'pit_command' }, (payload) => {
           const data = payload?.payload || payload?.data || payload;
           if (role === 'driver' && data) {
@@ -128,50 +138,51 @@ export function useRealtimeTelemetry(role = 'driver') {
           if (modeData) {
             setDriverStrategyMode(String(modeData).toUpperCase());
           }
-        });
-
-      // Listen to Supabase table changes if enabled
-      if (supabase?.channel) {
-        channel
-          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'commands' }, (payload) => {
-            if (payload.new && role === 'driver') {
-              handleIncomingCommand({
-                id: payload.new.id,
-                sender: 'PIT',
-                type: payload.new.command_name,
-                payload: payload.new.command_name,
-                status: payload.new.status,
-                timestamp: new Date(payload.new.created_at).getTime(),
-              });
-            }
-          })
-          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'commands' }, (payload) => {
-            if (payload.new && payload.new.status === 'ACKNOWLEDGED') {
-              handleDriverAck({
-                commandId: payload.new.id,
-                commandText: payload.new.command_name,
-                timestamp: new Date(payload.new.acknowledged_at || Date.now()).getTime(),
-              });
-            }
-          })
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'race_flags' }, (payload) => {
-            if (payload.new && payload.new.active_flag) {
-              setDriverTelemetry(prev => ({ ...prev, flag: payload.new.active_flag.toLowerCase() }));
-            }
-          });
-      }
-
-      channel.subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('Supabase Realtime connected');
+        })
+        // Postgres changes (must be chained before subscribe)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'commands' }, (payload) => {
+          if (payload.new && role === 'driver') {
+            handleIncomingCommand({
+              id: payload.new.id,
+              sender: 'PIT',
+              type: payload.new.command_name,
+              payload: payload.new.command_name,
+              status: payload.new.status,
+              timestamp: new Date(payload.new.created_at).getTime(),
+            });
           }
-          setConnectionMode('supabase');
-          channelRef.current = channel;
-        }
-      });
+        })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'commands' }, (payload) => {
+          if (payload.new && payload.new.status === 'ACKNOWLEDGED') {
+            handleDriverAck({
+              commandId: payload.new.id,
+              commandText: payload.new.command_name,
+              timestamp: new Date(payload.new.acknowledged_at || Date.now()).getTime(),
+            });
+          }
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'race_flags' }, (payload) => {
+          if (payload.new && payload.new.active_flag) {
+            setDriverTelemetry(prev => ({ ...prev, flag: payload.new.active_flag.toLowerCase() }));
+          }
+        })
+        // Subscribe ONCE at the end (fixes WebSocket closure issues)
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            if (process.env.NODE_ENV === 'development') {
+              console.log('[useRealtimeTelemetry] Supabase Realtime connected:', channelName);
+            }
+            setConnectionMode('supabase');
+            channelRef.current = channel;
+          } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+            if (process.env.NODE_ENV === 'development') {
+              console.error('[useRealtimeTelemetry] Channel closed/error:', status);
+            }
+            setConnectionMode('mock');
+          }
+        });
     } catch (error) {
-      console.error('Supabase connection failed:', error);
+      console.error('[useRealtimeTelemetry] Supabase connection failed:', error);
       setConnectionMode('mock');
     }
   };
@@ -242,14 +253,7 @@ export function useRealtimeTelemetry(role = 'driver') {
       }).then(() => {}).catch(err => console.debug('[sendCommand] Supabase insert note:', err?.message));
     }
 
-    if (connectionMode === 'websocket' && socketRef.current) {
-      try {
-        const event = role === 'pit' ? 'pit_command' : 'director_command';
-        socketRef.current.emit(event, command);
-      } catch (error) {
-        console.error('[sendCommand] WebSocket emit error:', error);
-      }
-    } else if (connectionMode === 'supabase' && channelRef.current) {
+    if (connectionMode === 'supabase' && channelRef.current) {
       try {
         const event = role === 'pit' ? 'pit_command' : 'director_command';
         channelRef.current.send({
@@ -301,13 +305,7 @@ export function useRealtimeTelemetry(role = 'driver') {
       }
     }
 
-    if (connectionMode === 'websocket' && socketRef.current) {
-      try {
-        socketRef.current.emit('driver_ack', ack);
-      } catch (error) {
-        console.error('[sendAck] WebSocket emit error:', error);
-      }
-    } else if (connectionMode === 'supabase' && channelRef.current) {
+    if (connectionMode === 'supabase' && channelRef.current) {
       try {
         channelRef.current.send({
           type: 'broadcast',
@@ -328,14 +326,16 @@ export function useRealtimeTelemetry(role = 'driver') {
   const broadcastDriverStatus = useCallback((telemetry, activeCommand = null) => {
     const status = createUplinkMessage('driver-1', telemetry, activeCommand, null);
 
-    if (connectionMode === 'websocket' && socketRef.current) {
-      socketRef.current.emit('driver_status', status);
-    } else if (connectionMode === 'supabase' && channelRef.current) {
-      channelRef.current.send({
-        type: 'broadcast',
-        event: 'driver_status',
-        payload: status,
-      });
+    if (connectionMode === 'supabase' && channelRef.current) {
+      try {
+        channelRef.current.send({
+          type: 'broadcast',
+          event: 'driver_status',
+          payload: status,
+        });
+      } catch (error) {
+        console.error('[broadcastDriverStatus] Supabase send error:', error);
+      }
     }
   }, [connectionMode]);
 
