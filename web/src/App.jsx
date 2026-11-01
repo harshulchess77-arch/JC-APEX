@@ -15,9 +15,10 @@ import DriverHUD from './pages/DriverHUD';
 import { RaceEngineProvider } from '@/lib/RaceEngineContext';
 import { WeatherProvider } from '@/lib/WeatherContext';
 import GlobalCommandOverlay from './components/driver/GlobalCommandOverlay';
+import { OfflineBanner, DemoModeBanner } from './components/common/GlobalBanners';
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, isDemoMode } = useAuth();
 
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
@@ -31,6 +32,8 @@ const AuthenticatedApp = () => {
 
   return (
     <RaceEngineProvider>
+      <OfflineBanner />
+      <DemoModeBanner isDemoMode={isDemoMode} />
       <Routes>
         {/* ── PUBLIC ROUTES (no auth required) ── */}
         <Route path="/" element={<Landing />} />
