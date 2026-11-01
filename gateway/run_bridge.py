@@ -152,8 +152,8 @@ class UnifiedTelemetryBridge:
                 res = self.http_session.post(endpoint, headers=headers, json=payload, timeout=1.5)
 
                 if res.status_code == 200 or res.status_code == 201:
-                    if int(time.time()) % 10 == 0:  # Every 10 seconds
-                        print(f"[SUPABASE OK] Uploaded packet #{payload.get('packet_id')}")
+                    # Success - packet uploaded
+                    pass
                 elif res.status_code == 400:
                     print(f"[SUPABASE ERR 400] Bad request: {res.text[:100]}")
                     # Automatic fallback if database schema does not yet have newer columns (e.g. 'wh')
